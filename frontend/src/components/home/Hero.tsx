@@ -55,7 +55,7 @@ export function Hero({ onSearch, activeQuery }: HeroProps) {
         </h1>
 
         <p className="mt-5 max-w-[440px] text-[15px] leading-[1.75] text-[#62666b] sm:text-[16px]">
-          Discover, navigate, and experience New York with an AI companion that learns what you love.
+          Discover, navigate, and experience New York with an AI tour guide that learns what you love.
         </p>
 
         <form
