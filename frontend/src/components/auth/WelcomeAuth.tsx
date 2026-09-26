@@ -60,7 +60,11 @@ export function WelcomeAuth({ initialView = "welcome" }: { initialView?: AuthVie
     <div className="relative left-1/2 -mt-12 grid min-h-[100dvh] w-screen -translate-x-1/2 bg-[#faf9f6] lg:grid-cols-[minmax(0,1.12fr)_minmax(460px,0.88fr)]">
       <section className="relative flex min-h-[580px] flex-col overflow-hidden bg-[#f1efe8] px-6 pb-7 pt-8 sm:px-10 sm:pb-10 lg:min-h-[100dvh] lg:px-14 lg:pb-12 lg:pt-12 xl:px-20">
         <div className="relative z-10 flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-[11px] bg-[#0039a6] text-white"><Icon name="arrow-up-right" size={26} /></span>
+          <span className="flex size-10 items-center justify-center rounded-[11px] bg-[#0039a6] text-white">
+            <svg viewBox="0 0 26.2 20.4" width={30} height={23} aria-hidden="true">
+              <path d="M0.4 13.4 L0.4 12.2 L2.7 10.7 L3.2 9.5 L2.8 8.6 L2.7 7.9 L4.8 7.5 L7.4 7.9 L9.4 7.9 L11.5 6.9 L11.8 5.0 L11.4 4.2 L12.8 3.2 L14.7 1.3 L16.6 0.4 L21.0 0.4 L20.8 2.6 L21.0 5.6 L21.3 6.6 L21.2 10.2 L20.5 13.2 L20.5 15.1 L20.3 16.4 L20.0 17.7 L19.8 18.1 L23.4 17.8 L25.7 17.4 L23.7 18.6 L21.1 19.4 L19.0 19.6 L18.0 19.9 L18.2 19.3 L18.9 18.7 L19.2 17.7 L16.7 16.2 L15.5 14.3 L14.5 13.4Z" fill="currentColor" stroke="currentColor" strokeWidth={0.6} strokeLinejoin="round" />
+            </svg>
+          </span>
           <span className="text-[28px] font-extrabold tracking-[-0.07em] text-[#151719]">Chat<span className="text-[#0039a6]">NYC</span></span>
         </div>
 
@@ -74,7 +78,7 @@ export function WelcomeAuth({ initialView = "welcome" }: { initialView?: AuthVie
           <Image src="/images/nyc/hero.jpg" alt="A New York City street scene" fill priority sizes="(max-width: 1023px) 100vw, 56vw" className="object-cover" />
           <div className="absolute left-4 top-4 rounded-full border border-white/70 bg-[#faf9f6]/95 px-3 py-1.5 text-[9px] font-bold tracking-[0.13em] text-[#30363b]">ONE CITY · FIVE BOROUGHS</div>
           <div className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full bg-[#faf9f6]/95 px-3 py-2 text-[10px] font-semibold text-[#273039]">
-            <span className="flex size-5 items-center justify-center rounded-full bg-[#0039a6] text-white"><Icon name="sparkles" size={11} /></span>
+            <span className="flex size-5 items-center justify-center rounded-full bg-[#0039a6] text-white"><Icon name="bagel" size={11} /></span>
             Ock for the city · NextStop for the ride
           </div>
         </div>

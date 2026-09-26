@@ -7,7 +7,7 @@ export function MemoryPanel({ preferences, compact = false }: { preferences: str
     <div className={`flex flex-col gap-4 ${compact ? "" : "h-[min(74dvh,820px)] min-h-[590px]"}`}>
       <section aria-labelledby={`${headingPrefix}-ock-knows-heading`} className="rounded-2xl border border-[#e0e3df] bg-white p-5 sm:p-6">
         <div className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-[#eef3fb] text-[#0039a6]"><Icon name="sparkles" size={17} /></span>
+          <span className="flex size-9 items-center justify-center rounded-xl bg-[#eef3fb] text-[#0039a6]"><Icon name="bagel" size={17} /></span>
           <div><h2 id={`${headingPrefix}-ock-knows-heading`} className="text-sm font-semibold text-[#202428]">Ock knows</h2><p className="text-[9px] text-[#70767b]">A little about your NYC style</p></div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2" aria-label="Demo preferences">

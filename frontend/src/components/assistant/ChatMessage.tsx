@@ -20,7 +20,7 @@ export function ChatMessage({ message }: { message: ConversationMessage }) {
 
   return (
     <article className="flex items-start gap-3" aria-label="Ock message">
-      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#0039a6] text-white"><Icon name="sparkles" size={15} /></span>
+      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#0039a6] text-white"><Icon name="bagel" size={15} /></span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2"><p className="text-[11px] font-semibold text-[#252a2e]">Ock</p><span className="text-[9px] text-[#7a8085]">Your NYC sidekick</span></div>
         <p className="mt-1.5 text-sm leading-6 text-[#41474c]">{message.content}</p>

@@ -54,7 +54,7 @@ export function Hero() {
           className="mt-7 flex items-center gap-2 rounded-[14px] border border-[#d9ddde] bg-white p-2 pl-4 shadow-[0_3px_12px_rgba(20,28,38,0.035)] sm:pl-5"
           role="search"
         >
-          <Icon name="sparkles" size={19} className="shrink-0 text-[#0039A6]" />
+          <Icon name="bagel" size={19} className="shrink-0 text-[#0039A6]" />
           <label htmlFor="nyc-search" className="sr-only">
             Ask Ock anything about New York...
           </label>

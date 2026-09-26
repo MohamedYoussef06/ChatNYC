@@ -102,7 +102,7 @@ export function AssistantWorkspace({ initialQuery = "" }: { initialQuery?: strin
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="mb-2 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0039a6]">
-                <span className="flex size-5 items-center justify-center rounded-md bg-[#0039a6] text-white"><Icon name="sparkles" size={12} /></span>
+                <span className="flex size-5 items-center justify-center rounded-md bg-[#0039a6] text-white"><Icon name="bagel" size={12} /></span>
                 Ock
               </p>
               <h1 className="text-[2.35rem] font-semibold leading-none tracking-[-0.055em] text-[#151719] sm:text-[2.8rem]">Your NYC sidekick.</h1>
@@ -116,7 +116,7 @@ export function AssistantWorkspace({ initialQuery = "" }: { initialQuery?: strin
           <section aria-label="Conversation with Ock" className="flex h-[min(74dvh,820px)] min-h-[590px] flex-col overflow-hidden rounded-2xl border border-[#e0e3df] bg-white shadow-[0_5px_20px_rgba(21,23,25,0.045)]">
             <div className="flex items-center justify-between gap-3 border-b border-[#e6e8e4] px-4 py-3.5 sm:px-5">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#0039a6] text-white"><Icon name="sparkles" size={18} /></span>
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#0039a6] text-white"><Icon name="bagel" size={18} /></span>
                 <div className="min-w-0"><p className="truncate text-sm font-semibold text-[#202428]">Ock</p><p className="text-[10px] text-[#687076]">Your NYC sidekick</p></div>
               </div>
               <span className="inline-flex shrink-0 items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.11em] text-[#5d666b]"><span className="size-1.5 rounded-full bg-[#21874e]" /> Ready to chat</span>
