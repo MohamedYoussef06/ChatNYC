@@ -6,16 +6,17 @@ import { Navbar } from "@/components/Navbar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NYC Companion",
-  description: "Discover places, ride with CityPilot, and ask the assistant.",
+  title: "Borough — Make NYC yours",
+  description: "Discover, navigate, and experience New York with an AI companion that learns what you love.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
+        <a className="skip-link" href="#main-content">Skip to content</a>
         <Navbar />
-        <main className="page">{children}</main>
+        <main id="main-content" className="page" tabIndex={-1}>{children}</main>
       </body>
     </html>
   );

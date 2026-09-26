@@ -1,129 +1,67 @@
-:root {
-  color-scheme: light;
-  --ink: #1a1814;
-  --paper: #f3efe4;
-  --card: #fffdf8;
-  --line: #d7d0c2;
-  --signal: #c4491d;
-  --muted: #5e584e;
-  font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+@import "tailwindcss";
+@source "../";
+
+@theme inline {
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --color-subway-blue: #0039a6;
 }
 
-* {
-  box-sizing: border-box;
+@layer base {
+  :root {
+    color-scheme: light;
+    --ink: #151719;
+    --paper: #faf9f6;
+    --card: #fff;
+    --line: #e4e5e2;
+    --signal: #0039a6;
+    --muted: #62666b;
+  }
+  html { scroll-padding-top: 140px; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input { font: inherit; }
+  button, a, input { -webkit-tap-highlight-color: transparent; }
+  button:not(:disabled) { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  :focus-visible { outline: 3px solid #0039a6; outline-offset: 4px; }
+  ::selection { background: #dce8ff; color: #102859; }
+  h1, h2, h3, p { overflow-wrap: break-word; }
+  dialog { margin: auto; color: var(--ink); }
+  dialog::backdrop { background: rgb(15 22 33 / 55%); }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
-body {
-  margin: 0;
-  background: var(--paper);
-  color: var(--ink);
-}
-
-a {
-  color: inherit;
-}
-
-.nav {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--line);
-  background: var(--card);
-}
-
-.nav nav {
-  display: flex;
-  gap: 1rem;
-}
-
-.brand {
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.page {
-  max-width: 42rem;
-  margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
-}
-
-.lede {
-  font-size: 1.25rem;
-  line-height: 1.5;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-
-.actions a,
-.button {
-  border: 1px solid var(--ink);
-  background: var(--signal);
-  color: white;
-  padding: 0.55rem 0.9rem;
-  text-decoration: none;
-  font: inherit;
-  cursor: pointer;
-}
-
-.button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.card,
-.chat,
-.map {
-  background: var(--card);
-  border: 1px solid var(--line);
-  padding: 1rem 1.1rem;
-  margin-top: 1rem;
-}
-
-.eyebrow {
-  margin: 0 0 0.35rem;
-  color: var(--muted);
-  font-family: "Segoe UI", sans-serif;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.map {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.map-line {
-  height: 3px;
-  background: linear-gradient(90deg, var(--signal), var(--ink));
-}
-
-.chat ul {
-  list-style: none;
-  padding: 0;
-  min-height: 4rem;
-}
-
-.chat form {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.chat input {
-  flex: 1;
-  font: inherit;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--line);
-  background: var(--paper);
-}
-
-.error {
-  color: var(--signal);
+@layer components {
+  .page { max-width: 1248px; margin: 0 auto; padding: 0 32px; }
+  .page:not(:has(.home-dashboard)) { max-width: 840px; min-height: 75vh; padding-top: 48px; padding-bottom: 64px; }
+  .page > h1 { margin-bottom: 24px; font-size: 40px; font-weight: 800; letter-spacing: -0.04em; }
+  .skip-link { position: fixed; top: -100px; left: 16px; z-index: 100; border-radius: 8px; background: #0039a6; color: white; padding: 12px 20px; }
+  .skip-link:focus { top: 12px; }
+  .button { border: 1px solid var(--signal); border-radius: 9px; background: var(--signal); color: white; padding: 10px 18px; font-weight: 600; }
+  .button:disabled { opacity: 0.6; }
+  .card, .chat, .map { margin-top: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); padding: 24px; }
+  .card h2 { margin: 8px 0; font-size: 22px; font-weight: 700; }
+  .card p { line-height: 1.65; }
+  .eyebrow { margin-bottom: 6px; color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .map { display: grid; gap: 14px; }
+  .map-line { height: 4px; border-radius: 4px; background: var(--signal); }
+  .chat ul { min-height: 100px; padding: 0; list-style: none; }
+  .chat li { padding: 8px 0; }
+  .chat form { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chat input { min-width: 0; flex: 1; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); padding: 10px; }
+  .error { color: #b3261e; }
+  @media (max-width: 639px) {
+    .page { padding-right: 20px; padding-left: 20px; }
+  }
 }
