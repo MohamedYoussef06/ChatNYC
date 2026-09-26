@@ -1,0 +1,5 @@
+.env
+data/*.zip
+data/*.zip.part
+data/*.db
+data/*.db-journal
