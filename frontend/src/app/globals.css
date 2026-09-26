@@ -1,0 +1,129 @@
+:root {
+  color-scheme: light;
+  --ink: #1a1814;
+  --paper: #f3efe4;
+  --card: #fffdf8;
+  --line: #d7d0c2;
+  --signal: #c4491d;
+  --muted: #5e584e;
+  font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+a {
+  color: inherit;
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+
+.nav nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.brand {
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.page {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.lede {
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.actions a,
+.button {
+  border: 1px solid var(--ink);
+  background: var(--signal);
+  color: white;
+  padding: 0.55rem 0.9rem;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.card,
+.chat,
+.map {
+  background: var(--card);
+  border: 1px solid var(--line);
+  padding: 1rem 1.1rem;
+  margin-top: 1rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--muted);
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.map {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.map-line {
+  height: 3px;
+  background: linear-gradient(90deg, var(--signal), var(--ink));
+}
+
+.chat ul {
+  list-style: none;
+  padding: 0;
+  min-height: 4rem;
+}
+
+.chat form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chat input {
+  flex: 1;
+  font: inherit;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.error {
+  color: var(--signal);
+}

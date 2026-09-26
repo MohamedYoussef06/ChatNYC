@@ -1,0 +1,1 @@
+"""nyc-companion FastAPI application."""
