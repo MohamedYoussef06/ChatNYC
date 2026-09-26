@@ -7,3 +7,7 @@ gtfs-realtime-bindings>=1.0
 protobuf>=4.21,<7
 pytest>=8.0
 tzdata>=2024.1
+elevenlabs>=2.0
+psycopg[binary]>=3.2
+pydo>=0.41
+pymongo>=4.10
