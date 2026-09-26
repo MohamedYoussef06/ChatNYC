@@ -1,4 +1,6 @@
 import { Icon } from "@/components/ui/Icon";
+import { LocationInput } from "@/components/citypilot/LocationInput";
+import { NYC_CENTER, type Coordinates, type SelectedLocation } from "@/lib/location-suggestions";
 
 export type TravelMode = "Transit" | "Drive" | "Walk";
 
@@ -8,13 +10,15 @@ const modes: { label: TravelMode; icon: "route" | "arrow-up-right" | "walk" }[] 
   { label: "Walk", icon: "walk" },
 ];
 
-export function TripPlanner({ origin, destination, arriveByDate, arriveByTime, travelMode, onOriginChange, onDestinationChange, onArriveByDateChange, onArriveByTimeChange, onTravelModeChange, onPlan }: {
+export function TripPlanner({ origin, destination, originLocation, arriveByDate, arriveByTime, travelMode, onOriginChange, onOriginSelect, onDestinationChange, onArriveByDateChange, onArriveByTimeChange, onTravelModeChange, onPlan }: {
   origin: string;
   destination: string;
+  originLocation: Coordinates | null;
   arriveByDate: string;
   arriveByTime: string;
   travelMode: TravelMode;
   onOriginChange: (value: string) => void;
+  onOriginSelect: (location: SelectedLocation) => void;
   onDestinationChange: (value: string) => void;
   onArriveByDateChange: (value: string) => void;
   onArriveByTimeChange: (value: string) => void;
@@ -37,21 +41,10 @@ export function TripPlanner({ origin, destination, arriveByDate, arriveByTime, t
           <span className="w-px flex-1 border-l border-dashed border-[#aebbd0]" />
           <span className="size-2.5 shrink-0 rounded-full bg-[#151719] ring-2 ring-white" />
         </div>
-        <div>
-          <label htmlFor="citypilot-origin" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#62666b]">From</label>
-          <div className="flex h-12 items-center gap-2.5 rounded-lg border border-[#d9dcd9] bg-[#fff] px-3 focus-within:border-[#0039a6] focus-within:ring-2 focus-within:ring-[#0039a6]/10">
-            <Icon name="pin" size={17} className="shrink-0 text-[#0039a6]" />
-            <input id="citypilot-origin" required value={origin} onChange={(event) => onOriginChange(event.target.value)} placeholder="Starting location" autoComplete="street-address" className="h-full min-w-0 flex-1 bg-transparent text-sm text-[#191c1e] outline-none placeholder:text-[#858a8e]" />
-          </div>
-        </div>
-        <div>
-          <label htmlFor="citypilot-destination" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#62666b]">To</label>
-          <div className="flex h-12 items-center gap-2.5 rounded-lg border border-[#d9dcd9] bg-[#fff] px-3 focus-within:border-[#0039a6] focus-within:ring-2 focus-within:ring-[#0039a6]/10">
-            <Icon name="pin" size={17} className="shrink-0 text-[#d52e29]" />
-            <input id="citypilot-destination" required value={destination} onChange={(event) => onDestinationChange(event.target.value)} placeholder="Where are you going?" autoComplete="off" className="h-full min-w-0 flex-1 bg-transparent text-sm text-[#191c1e] outline-none placeholder:text-[#858a8e]" />
-          </div>
-        </div>
+        <LocationInput id="citypilot-origin" label="From" value={origin} placeholder="Starting location" origin={originLocation ?? NYC_CENTER} onChange={onOriginChange} onSelect={onOriginSelect} />
+        <LocationInput id="citypilot-destination" label="To" value={destination} placeholder="Address, place, or bagel shop…" origin={originLocation ?? NYC_CENTER} onChange={onDestinationChange} pinClassName="text-[#d52e29]" />
       </div>
+      <p className="ml-8 mt-2 text-[10px] leading-4 text-[#777c81]">{originLocation ? "Distances are straight-line distances from your starting point." : "Distances are from Midtown Manhattan. Select a starting point for nearby matches."}</p>
 
       <fieldset className="mt-6">
         <legend className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#62666b]">Arrive by</legend>

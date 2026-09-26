@@ -7,6 +7,7 @@ import { LeaveTimeCard } from "@/components/citypilot/LeaveTimeCard";
 import { RouteTimeline } from "@/components/citypilot/RouteTimeline";
 import { TripBreakdown } from "@/components/citypilot/TripBreakdown";
 import { TripPlanner, type TravelMode } from "@/components/citypilot/TripPlanner";
+import { COLUMBIA_LOCATION, type Coordinates } from "@/lib/location-suggestions";
 
 type TripPhase = "planning" | "planned" | "active";
 type PlannedTrip = { leaveAt: string; eta: string; arriveBy: string; destination: string; mode: TravelMode };
@@ -24,6 +25,7 @@ function formatTime(date: Date) {
 export function CityPilot({ initialDestination }: { initialDestination: string }) {
   const [phase, setPhase] = useState<TripPhase>("planning");
   const [origin, setOrigin] = useState("Columbia University");
+  const [originLocation, setOriginLocation] = useState<Coordinates | null>(COLUMBIA_LOCATION);
   const [destination, setDestination] = useState(initialDestination || "Smalls Jazz Club");
   const [arriveByDate, setArriveByDate] = useState("2026-09-26");
   const [arriveByTime, setArriveByTime] = useState("19:30");
@@ -61,10 +63,12 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
               <TripPlanner
                 origin={origin}
                 destination={destination}
+                originLocation={originLocation}
                 arriveByDate={arriveByDate}
                 arriveByTime={arriveByTime}
                 travelMode={travelMode}
-                onOriginChange={setOrigin}
+                onOriginChange={(value) => { setOrigin(value); setOriginLocation(null); }}
+                onOriginSelect={(selected) => setOriginLocation(selected.location)}
                 onDestinationChange={setDestination}
                 onArriveByDateChange={setArriveByDate}
                 onArriveByTimeChange={setArriveByTime}
