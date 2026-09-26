@@ -1,27 +1,13 @@
-import { Map } from "@/components/Map";
-import { TripCard } from "@/components/TripCard";
-import { getTrips } from "@/lib/api";
+import { CityPilot } from "@/components/citypilot/CityPilot";
 
-export default async function NavigatePage() {
-  try {
-    const trips = await getTrips();
-    const trip = trips[0];
-    return (
-      <>
-        <h1>Navigate</h1>
-        {trip ? <Map origin={trip.origin} destination={trip.destination} /> : null}
-        {trips.map((item) => (
-          <TripCard key={item.id} trip={item} />
-        ))}
-      </>
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not load a trip.";
-    return (
-      <>
-        <h1>Navigate</h1>
-        <p className="error">{message}</p>
-      </>
-    );
-  }
+type NavigatePageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function NavigatePage({ searchParams }: NavigatePageProps) {
+  const params = await searchParams;
+  const destinationParam = params.destination;
+  const destination = Array.isArray(destinationParam) ? destinationParam[0] : destinationParam;
+
+  return <CityPilot initialDestination={destination ?? ""} />;
 }
