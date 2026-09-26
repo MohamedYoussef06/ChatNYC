@@ -13,10 +13,10 @@ export function TripBreakdown({ mode }: { mode: TravelMode }) {
     ? [["Walking", `${plan.walkingMinutes} min`], ["Safety buffer", `+${plan.bufferMinutes} min`], ["Total planned time", `${plan.totalMinutes} min`]]
     : [[plan.primaryLabel, `${plan.primaryMinutes} min`], ["Walking", `${plan.walkingMinutes} min`], ["Safety buffer", `+${plan.bufferMinutes} min`], ["Total planned time", `${plan.totalMinutes} min`]];
   const bufferExplanation = mode === "Transit"
-    ? "CityPilot adds a small buffer so a delayed train or slower walk doesn't make you late."
+    ? "NextStop adds a small buffer so a delayed train or slower walk doesn't make you late."
     : mode === "Drive"
-      ? "CityPilot adds a small buffer for pickup delays or slower traffic."
-      : "CityPilot adds a small buffer in case the walk takes longer than expected.";
+      ? "NextStop adds a small buffer for pickup delays or slower traffic."
+      : "NextStop adds a small buffer in case the walk takes longer than expected.";
 
   return (
     <section aria-labelledby="trip-breakdown-heading" className="rounded-2xl border border-[#e1e3df] bg-white px-5 py-5 sm:px-6">

@@ -1,33 +1,24 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 
-type HeroProps = {
-  onSearch: (query: string) => void;
-  activeQuery: string;
-};
-
 const suggestions = [
-  { label: "A great slice", query: "pizza" },
-  { label: "Something outdoors", query: "parks" },
-  { label: "Live music tonight", query: "live music" },
+  { label: "Plan a cheap date tonight", query: "Plan a cheap date tonight" },
+  { label: "Find live music near me", query: "Find live music near me" },
+  { label: "I have 3 hours in Brooklyn", query: "I have 3 hours in Brooklyn" },
 ];
 
-export function Hero({ onSearch, activeQuery }: HeroProps) {
+export function Hero() {
   const [query, setQuery] = useState("");
-
-  useEffect(() => { setQuery(activeQuery); }, [activeQuery]);
+  const router = useRouter();
 
   function search(value: string) {
-    onSearch(value.trim());
-    document.getElementById("recommendations")?.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "instant"
-        : "smooth",
-      block: "start",
-    });
+    const prompt = value.trim();
+    if (!prompt) return;
+    router.push(`/assistant?q=${encodeURIComponent(prompt)}`);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -43,7 +34,7 @@ export function Hero({ onSearch, activeQuery }: HeroProps) {
       <div>
         <p className="mb-5 flex items-center gap-2 text-[10px] font-bold tracking-[0.15em] text-[#585f63] sm:text-[11px]">
           <span className="h-2 w-2 shrink-0 rounded-full bg-[#0039A6]" aria-hidden="true" />
-          FIVE BOROUGHS. ENDLESS POSSIBILITIES.
+          OCK · YOUR NYC SIDEKICK
         </p>
 
         <h1
@@ -55,7 +46,7 @@ export function Hero({ onSearch, activeQuery }: HeroProps) {
         </h1>
 
         <p className="mt-5 max-w-[440px] text-[15px] leading-[1.75] text-[#62666b] sm:text-[16px]">
-          Discover, navigate, and experience New York with an AI tour guide that learns what you love.
+          Your NYC sidekick for finding places, making plans, getting around, and figuring out what&apos;s next.
         </p>
 
         <form
@@ -65,7 +56,7 @@ export function Hero({ onSearch, activeQuery }: HeroProps) {
         >
           <Icon name="sparkles" size={19} className="shrink-0 text-[#0039A6]" />
           <label htmlFor="nyc-search" className="sr-only">
-            What do you want to do in New York?
+            Ask Ock anything about New York...
           </label>
           <input
             id="nyc-search"
@@ -73,12 +64,12 @@ export function Hero({ onSearch, activeQuery }: HeroProps) {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="What do you want to do in New York?"
+            placeholder="Ask Ock anything about New York..."
             className="min-w-0 flex-1 rounded px-1 py-3 text-[13px] text-[#151719] placeholder:text-[#71777b] sm:text-[14px]"
           />
           <button
             type="submit"
-            aria-label="Find NYC recommendations"
+            aria-label="Start a conversation with Ock"
             className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-[9px] bg-[#0039A6] text-white transition-colors hover:bg-[#002e86]"
           >
             <Icon name="arrow-right" size={21} />

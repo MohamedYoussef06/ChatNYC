@@ -52,7 +52,7 @@ export function PlaceDetailPanel({ place, saved, onClose, onSave }: {
             <Icon name={saved ? "check" : "bookmark"} size={17} />{saved ? "Saved" : "Save"}
           </button>
           <Link href="/navigate" onClick={() => dialogRef.current?.close()} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#0039a6] px-4 text-center text-sm font-semibold text-white transition-colors hover:bg-[#002d85]">
-            Get me there with CityPilot <Icon name="arrow-right" size={17} />
+            Get me there with NextStop <Icon name="arrow-right" size={17} />
           </Link>
         </div>
         <p className="mt-3 text-center text-[10px] leading-4 text-[#74797d]">Place details and travel estimates are sample data.</p>

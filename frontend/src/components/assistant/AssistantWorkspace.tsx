@@ -58,9 +58,20 @@ function getMockResponse({ message }: ChatRequest): ChatResponse {
   };
 }
 
-export function AssistantWorkspace() {
-  const [messages, setMessages] = useState<ConversationMessage[]>([initialMessage]);
-  const [preferences, setPreferences] = useState(["Live music", "Budget spots", "Walking"]);
+export function AssistantWorkspace({ initialQuery = "" }: { initialQuery?: string }) {
+  const [messages, setMessages] = useState<ConversationMessage[]>(() => {
+    const text = initialQuery.trim();
+    if (!text) return [initialMessage];
+    const response = getMockResponse({ message: text, thread_id: "ock-local-demo-thread" });
+    return [
+      initialMessage,
+      { id: "user-initial", role: "user", content: text },
+      { id: "ock-initial", role: "assistant", content: response.message, recommendations: response.recommendations },
+    ];
+  });
+  const [preferences, setPreferences] = useState(() => /i (love|like) jazz|jazz is my/i.test(initialQuery)
+    ? ["Live music", "Budget spots", "Walking", "Jazz"]
+    : ["Live music", "Budget spots", "Walking"]);
   const conversationRef = useRef<HTMLDivElement>(null);
   const threadId = useRef("ock-local-demo-thread");
 

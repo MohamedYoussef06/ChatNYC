@@ -2,22 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuthMode } from "@/components/auth/AuthProvider";
 import { Icon } from "@/components/ui/Icon";
 
 const links = [
-  { href: "/discover", label: "Discover" },
-  { href: "/navigate", label: "CityPilot" },
   { href: "/assistant", label: "Ock" },
+  { href: "/navigate", label: "NextStop" },
   { href: "/profile", label: "Profile" },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
+  const { userMode } = useAuthMode();
+
+  if (pathname === "/") return null;
 
   return (
     <header className="sticky top-0 z-40 border-t-[3px] border-t-[#151719] border-b border-b-[#e4e5e2] bg-[#faf9f6]">
       <div className="mx-auto flex max-w-[1248px] flex-wrap items-center justify-between gap-x-6 px-5 pt-4 sm:px-8 md:h-[82px] md:flex-nowrap md:py-0">
-        <Link href="/" prefetch={false} aria-label="ChatNYC home" className="flex items-center gap-2.5 rounded-sm">
+        <Link href="/home" prefetch={false} aria-label="ChatNYC home" className="flex items-center gap-2.5 rounded-sm">
           <span className="flex size-9 items-center justify-center rounded-[10px] bg-[#0039a6] text-white"><Icon name="arrow-up-right" size={25} /></span>
           <span className="text-[25px] font-extrabold tracking-[-0.065em]">Chat<span className="text-[#0039a6]">NYC</span></span>
         </Link>
@@ -33,7 +36,8 @@ export function Navbar() {
           })}
         </nav>
 
-        <div className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.03em] text-[#60656b]">
+        <div className="flex items-center gap-3 text-[11px] font-semibold tracking-[0.03em] text-[#60656b]">
+          {userMode === "guest" && <span className="rounded-full border border-[#d8dce1] bg-white px-2.5 py-1 text-[9px] font-bold tracking-[0.1em] text-[#50585e]">GUEST</span>}
           <Icon name="pin" size={14} className="text-[#0039a6]" />
           <span className="hidden min-[380px]:inline">NEW YORK CITY</span>
           <span className="min-[380px]:hidden">NYC</span>

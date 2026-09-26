@@ -9,7 +9,7 @@ export function CityPilotMap() {
         <h2 id="citypilot-map-title" className="mt-5 text-xl font-semibold tracking-[-0.025em] text-[#252a2e]">Your route will appear here</h2>
         <p className="mt-2 text-sm leading-6 text-[#646c72]">A live map preview will be available when routing data is connected.</p>
       </div>
-      <span className="absolute left-4 top-4 rounded-full border border-[#e0e3e5] bg-white/80 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-[#6b7278]">CityPilot map</span>
+      <span className="absolute left-4 top-4 rounded-full border border-[#e0e3e5] bg-white/80 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-[#6b7278]">NextStop map</span>
     </section>
   );
 }

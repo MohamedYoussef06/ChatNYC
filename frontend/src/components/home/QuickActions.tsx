@@ -1,58 +1,92 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 
-const actions = [
-  {
-    title: "Discover NYC",
-    description: "Your next favorite spot is out there.",
-    href: "/discover",
-    icon: "compass",
-    color: "text-[#0039A6]",
-    background: "bg-[#eef3fc]",
-  },
-  {
-    title: "Plan a Trip",
-    description: "A smarter way from here to there.",
-    href: "/navigate",
-    icon: "route",
-    color: "text-[#00814a]",
-    background: "bg-[#eaf5ee]",
-  },
-  {
-    title: "Ask AI",
-    description: "A little local knowledge, on demand.",
-    href: "/assistant",
-    icon: "sparkles",
-    color: "text-[#ba4d06]",
-    background: "bg-[#fff1e5]",
-  },
-] as const;
+type ClassicPlace = {
+  name: string;
+  category: string;
+  neighborhood: string;
+  address: string;
+  description: string;
+  image: string;
+  imageAlt: string;
+  prompt: string;
+};
 
-type Action = (typeof actions)[number];
+const classicPlaces: ClassicPlace[] = [
+  {
+    name: "L’Industrie Pizzeria",
+    category: "PIZZA",
+    neighborhood: "West Village",
+    address: "104 Christopher St, New York, NY 10014",
+    description: "A defining New York slice, with a distinctly downtown following.",
+    image: "/images/places/lindustrie-pizzeria.webp",
+    imageAlt: "L’Industrie Pizzeria in the West Village",
+    prompt: "Tell me about L'Industrie Pizzeria and why I should go.",
+  },
+  {
+    name: "Red Hook Tavern",
+    category: "BURGER",
+    neighborhood: "Red Hook, Brooklyn",
+    address: "329 Van Brunt St, Brooklyn, NY 11231",
+    description: "A neighborhood tavern known for its dry-aged burger.",
+    image: "/images/places/red-hook-tavern.webp",
+    imageAlt: "Red Hook Tavern in Brooklyn",
+    prompt: "Tell me about Red Hook Tavern and its burger.",
+  },
+  {
+    name: "Ivan Ramen",
+    category: "RAMEN",
+    neighborhood: "Lower East Side",
+    address: "25 Clinton St, New York, NY 10002",
+    description: "A celebrated ramen shop bringing its own point of view to the LES.",
+    image: "/images/places/ivan-ramen.webp",
+    imageAlt: "Ivan Ramen on the Lower East Side",
+    prompt: "Tell me about Ivan Ramen and what to order.",
+  },
+  {
+    name: "Tompkins Square Bagels",
+    category: "BAGEL",
+    neighborhood: "East Village",
+    address: "165 Avenue A, New York, NY 10009",
+    description: "A lively neighborhood stop for a proper New York bagel.",
+    image: "/images/places/tompkins-square-bagels.webp",
+    imageAlt: "Tompkins Square Bagels in the East Village",
+    prompt: "Tell me about Tompkins Square Bagels and what to get.",
+  },
+];
 
-function QuickActionCard({ action }: { action: Action }) {
+export function JustAskOck() {
   return (
-    <Link
-      href={action.href}
-      prefetch={false}
-      className="group flex items-center gap-4 rounded-[14px] border border-[#e4e5e2] bg-white px-5 py-5 transition-colors hover:border-[#b6c6e4] hover:bg-[#fdfefe] sm:px-6 sm:py-6"
-    >
-      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] ${action.background} ${action.color}`} aria-hidden="true">
-        <Icon name={action.icon} size={24} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <h2 className="text-[16px] leading-tight font-bold tracking-[-0.025em] text-[#151719]">{action.title}</h2>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-[#656b70] sm:text-[12px]">{action.description}</p>
+    <section aria-labelledby="classics-heading" className="pb-9 sm:pb-11">
+      <div className="mb-5">
+        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#62666b]">A good place to start</p>
+        <h2 id="classics-heading" className="text-[25px] font-semibold tracking-[-0.045em] text-[#151719] sm:text-[29px]">Start with the classics.</h2>
+        <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[#62666b]">Four NYC spots worth knowing. Ask Ock for something more your speed.</p>
       </div>
-      <Icon name="arrow-up-right" size={18} className="shrink-0 text-[#777e83] transition-colors group-hover:text-[#0039A6]" />
-    </Link>
-  );
-}
 
-export function QuickActions() {
-  return (
-    <nav aria-label="Explore your NYC companion" className="grid gap-3 pb-12 sm:gap-4 md:grid-cols-3 sm:pb-14">
-      {actions.map((action) => <QuickActionCard key={action.href} action={action} />)}
-    </nav>
+      <ul className="grid list-none gap-4 p-0 sm:grid-cols-2 xl:grid-cols-4">
+        {classicPlaces.map((place) => (
+          <li key={place.name}>
+            <article className="h-full overflow-hidden rounded-[14px] border border-[#e1e3e0] bg-white">
+              <div className="relative aspect-[16/10] overflow-hidden bg-[#e8e7e2]">
+                <Image src={place.image} alt={place.imageAlt} fill sizes="(max-width: 639px) 100vw, (max-width: 1279px) 50vw, 25vw" className="object-cover" />
+                <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-bold tracking-[0.12em] text-[#30363b]">{place.category}</span>
+              </div>
+              <div className="flex min-h-[190px] flex-col p-4 sm:p-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#626970]">{place.neighborhood}</p>
+                <h3 className="mt-1 text-base font-semibold tracking-tight text-[#202529]">{place.name}</h3>
+                <p className="mt-1 text-[11px] leading-4 text-[#687077]">{place.address}</p>
+                <p className="mt-3 text-xs leading-5 text-[#4f575d]">{place.description}</p>
+                <Link href={`/assistant?q=${encodeURIComponent(place.prompt)}`} prefetch={false} className="group mt-auto inline-flex w-fit items-center gap-1 pt-4 text-[11px] font-semibold text-[#0039A6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0039A6]">
+                  Ask Ock <Icon name="arrow-right" size={14} className="transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </div>
+            </article>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[9px] leading-4 text-[#777d82]">MVP classics · place details and images are static demo content.</p>
+    </section>
   );
 }

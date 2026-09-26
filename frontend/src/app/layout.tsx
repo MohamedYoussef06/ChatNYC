@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import { Navbar } from "@/components/Navbar";
 
 import "./globals.css";
@@ -16,10 +17,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <body className="flex min-h-screen flex-col" suppressHydrationWarning>
         <a className="skip-link" href="#main-content">Skip to content</a>
-        <Navbar />
-        <main id="main-content" className="page w-full flex-1" tabIndex={-1}>
-          {children}
-        </main>
+        <AuthProvider>
+          <Navbar />
+          <main id="main-content" className="page w-full flex-1" tabIndex={-1}>
+            {children}
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -44,7 +44,7 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
         <header className="border-b border-[#e3e4e0] pb-5 pt-8 sm:pb-6 sm:pt-9">
           <p className="mb-2 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0039a6]">
             <span className="flex size-5 items-center justify-center rounded-full bg-[#0039a6] text-white"><span className="size-1.5 rounded-full bg-white" /></span>
-            CityPilot
+            NextStop
           </p>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -55,7 +55,7 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
           </div>
         </header>
 
-        <section aria-label="CityPilot trip workspace" className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1fr)] lg:gap-6">
+        <section aria-label="NextStop trip workspace" className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1fr)] lg:gap-6">
           <div className="min-w-0">
             {phase === "planning" && (
               <TripPlanner
@@ -90,7 +90,7 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
           <CityPilotMap />
         </section>
 
-        <p className="mt-5 text-center text-[10px] leading-4 text-[#767b80] sm:text-left">CityPilot plans are illustrative previews. Live routing and service data are not connected yet.</p>
+        <p className="mt-5 text-center text-[10px] leading-4 text-[#767b80] sm:text-left">NextStop plans are illustrative previews. Live routing and service data are not connected yet.</p>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import { Icon } from "@/components/ui/Icon";
 import { TransitBadge } from "@/components/ui/TransitBadge";
 import type { Recommendation } from "@/lib/recommendations";
 
-function citypilotDestination(place: Recommendation) {
+function nextStopDestination(place: Recommendation) {
   if (place.id === "village-jazz-night") return "Smalls Jazz Club";
   if (place.id === "washington-square-afternoon") return "Washington Square Park";
   if (place.id === "greenmarket-morning") return "Union Square Greenmarket";
@@ -31,7 +31,7 @@ export function AssistantRecommendation({ place }: { place: Recommendation }) {
       {expanded && <p className="mt-3 border-t border-[#e7e9e6] pt-2.5 text-[11px] leading-5 text-[#5a6267]">{place.description} <span className="block mt-1 text-[10px]">Nearest stop: {place.station} · {place.walk}</span></p>}
       <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#e7e9e6] pt-2.5">
         <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="min-h-8 rounded-md px-2 text-[10px] font-semibold text-[#454c51] hover:bg-[#f1f3f2]">{expanded ? "Hide details" : "View place"}</button>
-        <Link href={`/navigate?destination=${encodeURIComponent(citypilotDestination(place))}`} className="inline-flex min-h-8 items-center gap-1 rounded-md bg-[#0039a6] px-2.5 text-[10px] font-semibold text-white hover:bg-[#002d85]">Get me there <Icon name="arrow-right" size={13} /></Link>
+        <Link href={`/navigate?destination=${encodeURIComponent(nextStopDestination(place))}`} className="inline-flex min-h-8 items-center gap-1 rounded-md bg-[#0039a6] px-2.5 text-[10px] font-semibold text-white hover:bg-[#002d85]">Get me there <Icon name="arrow-right" size={13} /></Link>
       </div>
     </article>
   );
