@@ -11,6 +11,17 @@ def search_stations(q: str = Query(default="", max_length=80)) -> list[dict[str,
     if graph is None:
         raise HTTPException(status_code=503, detail=load_error() or "Subway data is not loaded")
     return [
-        {"id": station.id, "name": station.name, "lat": station.lat, "lon": station.lon}
+        {
+            "id": station.id,
+            "name": station.name,
+            "lat": station.lat,
+            "lon": station.lon,
+            "routes": station_routes(graph, station.id),
+        }
         for station in graph.search(q)
     ]
+
+
+def station_routes(graph, station_id: str) -> list[str]:
+    # tells the six "86 St" results apart
+    return sorted({graph.route_label(route) for route in graph.routes_at.get(station_id, ())})

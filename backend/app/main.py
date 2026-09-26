@@ -6,11 +6,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.meetings import router as meetings_router
+from app.api.places import router as places_router
 from app.api.stations import router as stations_router
 from app.api.trips import router as trips_router
 from app.db import init_db
 from app.feeds.realtime import live_store, updated_at_iso
 from app.feeds.static_gtfs import current_graph, load, load_error
+from app.routing import timetable
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
@@ -19,15 +21,20 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 async def lifespan(_app: FastAPI):
     init_db()
     await asyncio.to_thread(load)
+    await asyncio.to_thread(timetable.after_load)
     stop = asyncio.Event()
     poller = asyncio.create_task(live_store.poll_loop(stop))
+    reloader = asyncio.create_task(timetable.daily_reload(stop))
     try:
         yield
     finally:
         stop.set()
         poller.cancel()
+        reloader.cancel()
         with suppress(asyncio.CancelledError):
             await poller
+        with suppress(asyncio.CancelledError):
+            await reloader
 
 
 app = FastAPI(
@@ -45,12 +52,14 @@ app.add_middleware(
 app.include_router(stations_router, prefix="/api")
 app.include_router(trips_router, prefix="/api")
 app.include_router(meetings_router, prefix="/api")
+app.include_router(places_router, prefix="/api")
 
 
 @app.get("/health")
 def health() -> dict:
     graph = current_graph()
     snapshot = live_store.snapshot()
+    table = timetable.current()
     return {
         "status": "ok" if graph is not None else "degraded",
         "gtfs_loaded": graph is not None,
@@ -58,4 +67,6 @@ def health() -> dict:
         "live": snapshot.fresh,
         "feeds_updated_at": updated_at_iso(snapshot),
         "detail": load_error(),
+        "timetable_trips": len(table.trips) if table is not None else 0,
+        "live_trains": len(snapshot.trips),
     }

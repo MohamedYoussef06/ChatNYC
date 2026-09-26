@@ -14,6 +14,7 @@ import httpx
 from google.transit import gtfs_realtime_pb2
 
 from app.config import ALERTS_FEED, SUBWAY_FEEDS, settings
+from app.feeds import live_trips
 from app.feeds.static_gtfs import current_graph
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,10 @@ class LiveSnapshot:
     updated_at: float | None = None
     arrivals: dict[tuple[str, str, str], tuple[int, ...]] = field(default_factory=dict)
     alerts: tuple[AlertNotice, ...] = ()
+    connections: tuple[tuple, ...] = ()
+    horizon: dict[tuple[str, str, str], int] = field(default_factory=dict)
+    trips: dict[str, tuple[str, str]] = field(default_factory=dict)
+    covered: frozenset[str] = frozenset()
 
     @property
     def fresh(self) -> bool:
@@ -75,8 +80,23 @@ class LiveStore:
     def snapshot(self) -> LiveSnapshot:
         return self._snapshot
 
-    def publish(self, arrivals: dict[tuple[str, str, str], tuple[int, ...]], alerts: tuple[AlertNotice, ...]) -> None:
-        self._snapshot = LiveSnapshot(updated_at=time.time(), arrivals=arrivals, alerts=alerts)
+    def publish(
+        self,
+        arrivals: dict[tuple[str, str, str], tuple[int, ...]],
+        alerts: tuple[AlertNotice, ...],
+        connections: tuple[tuple, ...] = (),
+        trips: dict[str, tuple[str, str]] | None = None,
+        covered: frozenset[str] = frozenset(),
+    ) -> None:
+        self._snapshot = LiveSnapshot(
+            updated_at=time.time(),
+            arrivals=arrivals,
+            alerts=alerts,
+            connections=connections,
+            horizon=live_trips.horizon(connections),
+            trips=trips or {},
+            covered=covered,
+        )
 
     async def poll_loop(self, stop: asyncio.Event) -> None:
         while not stop.is_set():
@@ -90,17 +110,20 @@ class LiveStore:
                 continue
 
     async def refresh(self) -> None:
-        if not settings.mta_api_key.strip():
-            if not self._warned_missing_key:
-                logger.warning("MTA_API_KEY is not set; trip plans use the static schedule only")
-                self._warned_missing_key = True
-            return
+        if not settings.mta_api_key.strip() and not self._warned_missing_key:
+            # feeds are public now, the key is optional
+            logger.info("MTA_API_KEY not set, polling the public feeds")
+            self._warned_missing_key = True
         graph = current_graph()
         if graph is None:
             logger.warning("Skipping realtime poll until static GTFS is loaded")
             return
 
-        headers = {"x-api-key": settings.mta_api_key.strip(), "User-Agent": USER_AGENT}
+        headers = {"User-Agent": USER_AGENT}
+        if settings.mta_api_key.strip():
+            headers["x-api-key"] = settings.mta_api_key.strip()
+        trips: list[live_trips.LiveTrip] = []
+        covered: set[str] = set()
         arrival_lists: dict[tuple[str, str, str], list[int]] = defaultdict(list)
         subway_ok = False
         alerts_ok = False
@@ -110,6 +133,8 @@ class LiveStore:
                 try:
                     payload = await _fetch_feed(client, feed)
                     _parse_trip_updates(payload, graph, arrival_lists)
+                    live_trips.collect(payload, graph, trips)
+                    covered |= live_trips.FEED_ROUTES.get(feed, set())
                     subway_ok = True
                 except Exception:
                     logger.warning("Subway feed %s failed", feed, exc_info=True)
@@ -131,8 +156,14 @@ class LiveStore:
             stamps = sorted({stamp for stamp in values if stamp >= now})
             if stamps:
                 cleaned[key] = tuple(stamps[:30])
-        self.publish(cleaned, alerts)
-        logger.info("Realtime cache updated: %s directed arrivals, %s alerts", len(cleaned), len(alerts))
+        connections, trip_info = live_trips.build(trips, graph, now)
+        self.publish(cleaned, alerts, connections, trip_info, frozenset(covered))
+        logger.info(
+            "Realtime cache updated: %s directed arrivals, %s live trains, %s alerts",
+            len(cleaned),
+            len(trip_info),
+            len(alerts),
+        )
 
 
 live_store = LiveStore()

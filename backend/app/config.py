@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     transfer_penalty_seconds: int = 120
     walk_speed_mps: float = 1.3
     max_snap_meters: float = 3000
+    snap_candidates: int = 5
+    snap_radius_meters: float = 1000
+    transfer_weight_seconds: int = 240
+    search_hours: int = 3
+    arrive_buffer_minutes: int = 5
+    nominatim_url: str = "https://nominatim.openstreetmap.org/search"
+    share_url_base: str = "http://localhost:3000/meet"
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_ROOT / ".env"),

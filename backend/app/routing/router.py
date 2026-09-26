@@ -50,6 +50,8 @@ def plan_trip(
     dest_lat: float,
     dest_lon: float,
     depart_at: datetime,
+    arrive_by: datetime | None = None,
+    buffer_seconds: int = 0,
 ) -> dict:
     graph = _require_graph()
     depart_at = _as_ny(depart_at)
@@ -59,6 +61,20 @@ def plan_trip(
         raise TripPlanningError("Origin is outside the NYC subway network")
     if dest_distance > settings.max_snap_meters:
         raise TripPlanningError("Destination is outside the NYC subway network")
+
+    from app.routing.planner import plan_timed
+
+    # timetable first, the graph below is the fallback
+    timed = plan_timed(
+        graph,
+        (origin_label, origin_lat, origin_lon),
+        (dest_label, dest_lat, dest_lon),
+        depart_at,
+        _as_ny(arrive_by) if arrive_by is not None else None,
+        buffer_seconds,
+    )
+    if timed is not None:
+        return timed
 
     origin_body = _endpoint(origin_label, origin_lat, origin_lon, origin_station)
     dest_body = _endpoint(dest_label, dest_lat, dest_lon, dest_station)
