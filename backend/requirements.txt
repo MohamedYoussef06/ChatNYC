@@ -11,3 +11,5 @@ elevenlabs>=2.0
 psycopg[binary]>=3.2
 pydo>=0.41
 pymongo>=4.10
+googlemaps>=4.10
+backboard-sdk>=1.5

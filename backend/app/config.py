@@ -23,6 +23,8 @@ ALERTS_FEED = "camsys/all-alerts"
 
 class Settings(BaseSettings):
     mta_api_key: str = ""
+    google_maps_api_key: str = ""
+    backboard_api_key: str = ""
     mta_feed_base: str = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/"
     gtfs_static_url: str = "http://web.mta.info/developers/data/nyct/subway/google_transit.zip"
     poll_interval_seconds: int = 30
