@@ -1,6 +1,8 @@
+import { RouteWeatherSection } from "@/components/citypilot/RouteWeather";
 import { Icon } from "@/components/ui/Icon";
 import type { TripLocation } from "@/lib/location-suggestions";
 import { unavailableRouteCost, type RouteCostItem, type RouteOption } from "@/lib/route-metrics";
+import type { RouteWeather } from "@/lib/weather";
 
 const modeLabels = { Transit: "Transit", Drive: "Drive", Walk: "Walk" } as const;
 const modeIcons = { Transit: "route", Drive: "arrow-up-right", Walk: "walk" } as const;
@@ -32,11 +34,13 @@ function stepLabel(step: google.maps.routes.RouteLegStep) {
   return step.instructions?.replace(/<[^>]*>/g, "") || "Step details unavailable";
 }
 
-export function TripBreakdown({ option, origin, destination, onEdit }: {
+export function TripBreakdown({ option, origin, destination, onEdit, weatherStatus = "unavailable", weather }: {
   option: RouteOption;
   origin: TripLocation;
   destination: TripLocation;
   onEdit: () => void;
+  weatherStatus?: "loading" | "ready" | "unavailable";
+  weather?: RouteWeather;
 }) {
   const metrics = option.metrics;
   const cost = metrics?.costDetails ?? unavailableRouteCost(option.mode);
@@ -66,6 +70,8 @@ export function TripBreakdown({ option, origin, destination, onEdit }: {
         {(option.mode === "Drive" || option.mode === "Walk") && <div><dt className="text-[#686e73]">Distance</dt><dd className="mt-1 font-semibold tabular-nums">{formatDistance(metrics?.distanceMeters)}</dd></div>}
         {option.mode === "Transit" && <div><dt className="text-[#686e73]">Transfers</dt><dd className="mt-1 font-semibold tabular-nums">{metrics ? metrics.transfers : "—"}</dd></div>}
       </dl>
+
+      <RouteWeatherSection mode={option.mode} status={weatherStatus} weather={weather ?? option.weather} />
 
       <section aria-labelledby="route-steps-heading" className="mt-5">
         <h3 id="route-steps-heading" className="text-sm font-semibold">Route</h3>

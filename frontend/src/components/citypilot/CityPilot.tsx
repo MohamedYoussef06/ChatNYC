@@ -9,8 +9,15 @@ import { useUserLocation } from "@/hooks/useUserLocation";
 import type { TripLocation } from "@/lib/location-suggestions";
 import { compareRoutes, getRouteRecommendation } from "@/lib/route-options";
 import { routeErrorMessage, type RouteMode, type RouteOption, type RouteRecommendation } from "@/lib/route-metrics";
+import { getRouteWeather, type RouteWeather, type WeatherPlace } from "@/lib/weather";
 
 type SidebarView = "planner" | "breakdown";
+type WeatherStatus = "loading" | "ready" | "unavailable";
+
+function weatherPlace(location: TripLocation): WeatherPlace | undefined {
+  if (location.latitude == null || location.longitude == null) return undefined;
+  return location.label ? { latitude: location.latitude, longitude: location.longitude, label: location.label } : { latitude: location.latitude, longitude: location.longitude };
+}
 
 function routeLocation(location: TripLocation) {
   return location.latitude != null && location.longitude != null
@@ -30,10 +37,12 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
   const [recommendation, setRecommendation] = useState<RouteRecommendation | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [weatherState, setWeatherState] = useState<{ mode: RouteMode; status: WeatherStatus; weather?: RouteWeather } | null>(null);
   const [sidebarView, setSidebarView] = useState<SidebarView>("planner");
   const [sidebarExiting, setSidebarExiting] = useState(false);
   const [hasTransitioned, setHasTransitioned] = useState(false);
   const requestRef = useRef(0);
+  const weatherRequest = useRef(0);
   const aiController = useRef<AbortController | null>(null);
   const transitionTimer = useRef<number | null>(null);
   const userLocation = useUserLocation();
@@ -64,11 +73,13 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
 
   function invalidate() {
     requestRef.current += 1;
+    weatherRequest.current += 1;
     aiController.current?.abort();
     setOptions([]);
     setRecommendation(null);
     setAiLoading(false);
     setAiError("");
+    setWeatherState(null);
     setError("");
     setBusy(false);
   }
@@ -138,6 +149,44 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
 
   const selected = options.find((option) => option.mode === travelMode) ?? options[0];
   const showingResults = sidebarView === "breakdown" && Boolean(selected);
+  const weatherQuery = showingResults && selected?.departure && selected.arrival ? {
+    mode: selected.mode,
+    departure: selected.departure,
+    arrival: selected.arrival,
+    origin,
+    destination,
+    cached: selected.weather,
+  } : null;
+  const weatherKey = weatherQuery
+    ? `${weatherQuery.mode}|${weatherQuery.departure.getTime()}|${weatherQuery.arrival.getTime()}|${origin.latitude ?? ""}|${origin.longitude ?? ""}|${destination.latitude ?? ""}|${destination.longitude ?? ""}|${weatherQuery.cached ? "ready" : "open"}`
+    : "";
+  const weatherQueryRef = useRef(weatherQuery);
+  weatherQueryRef.current = weatherQuery;
+
+  useEffect(() => {
+    const query = weatherQueryRef.current;
+    if (!query) return;
+    const request = ++weatherRequest.current;
+    if (query.cached) {
+      setWeatherState({ mode: query.mode, status: "ready", weather: query.cached });
+      return;
+    }
+    let cancelled = false;
+    setWeatherState({ mode: query.mode, status: "loading" });
+    void getRouteWeather({
+      origin: weatherPlace(query.origin),
+      destination: weatherPlace(query.destination),
+      departureTime: query.departure.toISOString(),
+      arrivalTime: query.arrival.toISOString(),
+    }).then((weather) => {
+      if (cancelled || request !== weatherRequest.current) return;
+      if (weather) setOptions((current) => current.map((option) => option.mode === query.mode ? { ...option, weather } : option));
+      setWeatherState(weather ? { mode: query.mode, status: "ready", weather } : { mode: query.mode, status: "unavailable" });
+    }).catch(() => {
+      if (!cancelled && request === weatherRequest.current) setWeatherState({ mode: query.mode, status: "unavailable" });
+    });
+    return () => { cancelled = true; };
+  }, [weatherKey]);
 
   return (
     <div className="nextstop-workspace relative left-1/2 -mt-12 w-screen max-w-none -translate-x-1/2 px-5 pb-12 sm:px-8 xl:px-12 2xl:px-16">
@@ -156,7 +205,9 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
           <div className={`${showingResults ? "order-2" : "order-1"} nextstop-planner-column min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1`}>
             <div className={`nextstop-sidebar-slot${sidebarExiting ? " is-exiting" : ""}`}>
               {showingResults && selected ? (
-                <TripBreakdown key={selected.mode} option={selected} origin={origin} destination={destination} onEdit={editTrip} />
+                <TripBreakdown key={selected.mode} option={selected} origin={origin} destination={destination} onEdit={editTrip}
+                  weatherStatus={weatherState?.mode === selected.mode ? weatherState.status : "loading"}
+                  weather={weatherState?.mode === selected.mode ? weatherState.weather : undefined} />
               ) : (
                 <TripPlanner origin={origin} destination={destination} arriveByDate={arriveByDate} arriveByTime={arriveByTime} busy={busy}
                   locationStatus={userLocation.status} locationError={userLocation.error} usingCurrentLocation={origin.label === "Current location" && origin.latitude != null}
@@ -176,7 +227,7 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
             <CityPilotMap route={showingResults ? selected?.route : undefined} userLocation={userLocation.location} />
           </div>
         </section>
-        <p className="nextstop-footer mt-5 text-[10px] leading-4 text-[#767b80]">Routes and schedules are estimates from Google Maps. Ock compares the available data; missing fares, costs, and buffer times stay unknown. Route endpoints must be within the NYC map bounds.</p>
+        <p className="nextstop-footer mt-5 text-[10px] leading-4 text-[#767b80]">Routes and schedules are estimates from Google Maps. Ock compares the available data; missing fares, costs, buffer times, and weather stay unknown. Route endpoints must be within the NYC map bounds.</p>
       </div>
     </div>
   );

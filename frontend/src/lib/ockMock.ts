@@ -1,4 +1,5 @@
 import type { SubwayLine } from "@/components/ui/TransitBadge";
+import type { OckTripContext } from "@/lib/ock-context";
 import { recommendations, searchRecommendations, type Recommendation } from "@/lib/recommendations";
 
 export type OckResultType = "places" | "itinerary" | "activity" | "route-handoff" | "empty";
@@ -43,6 +44,7 @@ export type OckMockResponse = {
   message: string;
   resultType: OckResultType;
   data: OckResultData;
+  context?: OckTripContext;
 };
 
 const columbiaPizza: OckPlace[] = [

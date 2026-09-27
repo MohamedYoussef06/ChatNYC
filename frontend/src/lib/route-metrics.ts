@@ -1,3 +1,5 @@
+import type { RouteWeather } from "@/lib/weather";
+
 export type RouteMode = "Walk" | "Drive" | "Transit";
 export type RouteCostItem = {
   label: string;
@@ -32,6 +34,7 @@ export type RouteOption = {
   arrival?: Date;
   error?: string;
   bufferMinutes?: number;
+  weather?: RouteWeather;
 };
 export type RouteRecommendation = { mode: RouteMode; reason: string; tradeoffs: string[] };
 
