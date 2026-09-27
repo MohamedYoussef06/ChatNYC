@@ -86,14 +86,14 @@ export async function searchLocations(
 ): Promise<LocationSuggestion[]> {
   const input = normalizeLocationQuery(query);
   const autocomplete = library.AutocompleteSuggestion.fetchAutocompleteSuggestions({
-    input, origin, sessionToken, locationBias: NYC_BOUNDS,
+    input, origin, sessionToken, locationRestriction: NYC_BOUNDS,
     includedRegionCodes: ["us"], language: "en-US", region: "us",
   });
   // Text Search expands category and chain queries beyond autocomplete's few predictions.
   const businesses = /^\d/.test(input) ? Promise.resolve({ places: [] }) : library.Place.searchByText({
     textQuery: input,
     fields: ["id", "displayName", "formattedAddress", "location", "addressComponents"],
-    locationBias: { center: origin, radius: 30_000 },
+    locationRestriction: NYC_BOUNDS,
     rankPreference: library.SearchByTextRankPreference.DISTANCE,
     maxResultCount: 20, language: "en-US", region: "us",
   });

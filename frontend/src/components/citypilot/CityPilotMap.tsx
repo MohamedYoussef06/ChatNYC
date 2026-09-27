@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { loadGoogleMapsLibrary } from "@/lib/google-maps";
+import { NYC_BOUNDS } from "@/lib/location-suggestions";
 
 const NYC_CENTER = { lat: 40.7831, lng: -73.9712 };
 const INITIAL_ZOOM = 12;
 const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
 
-export function CityPilotMap() {
+export function CityPilotMap({ route }: { route?: google.maps.routes.Route }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">(apiKey ? "loading" : "error");
@@ -36,6 +37,7 @@ export function CityPilotMap() {
         mapRef.current = new Map(container!, {
           center: NYC_CENTER,
           zoom: INITIAL_ZOOM,
+          restriction: { latLngBounds: NYC_BOUNDS, strictBounds: true },
           gestureHandling: "cooperative",
           mapTypeControl: false,
           streetViewControl: false,
@@ -65,6 +67,21 @@ export function CityPilotMap() {
       container.replaceChildren();
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !route) return;
+    const polylines = route.createPolylines();
+    polylines.forEach((line) => line.setMap(map));
+    if (route.viewport) map.fitBounds(route.viewport, 50);
+    const endpoints = [route.path?.[0], route.path?.at(-1)];
+    const markers = endpoints.flatMap((point, index) => point ? [new google.maps.Circle({
+      map, center: { lat: point.lat, lng: point.lng }, radius: 35,
+      fillColor: index === 0 ? "#008044" : "#d52e29", fillOpacity: 1,
+      strokeColor: "#fff", strokeWeight: 2,
+    })] : []);
+    return () => { polylines.forEach((line) => line.setMap(null)); markers.forEach((marker) => marker.setMap(null)); };
+  }, [route, status]);
 
   function resetView() {
     mapRef.current?.setCenter(NYC_CENTER);

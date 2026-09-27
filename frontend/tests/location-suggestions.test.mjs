@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { googleMapsSearchUrl, locationSearchErrorMessage, normalizeLocationQuery, rankSuggestions, searchLocations, resolveLocation, distanceBetween, COLUMBIA_LOCATION } from "../src/lib/location-suggestions.ts";
+import { googleMapsSearchUrl, locationSearchErrorMessage, normalizeLocationQuery, rankSuggestions, searchLocations, resolveLocation, distanceBetween, COLUMBIA_LOCATION, NYC_BOUNDS } from "../src/lib/location-suggestions.ts";
 
 const candidate = (id, distanceMeters, isInCity = true) => ({ id, name: "Shake Shack", address: "New York, NY", label: "Shake Shack, New York, NY", distanceMeters, isInCity });
 const prediction = (id, name, address, distanceMeters = 100) => ({
@@ -69,6 +69,8 @@ test("address queries use autocomplete and enrich only visible addresses", async
   const results = await searchLocations(mock.library, "1745 W7", COLUMBIA_LOCATION, token);
   assert.equal(mock.calls.autocomplete[0].input, "1745 West 7");
   assert.equal(mock.calls.autocomplete[0].sessionToken, token);
+  assert.deepEqual(mock.calls.autocomplete[0].locationRestriction, NYC_BOUNDS);
+  assert.equal(mock.calls.autocomplete[0].locationBias, undefined);
   assert.equal(mock.calls.searches.length, 0);
   assert.equal(results.length, 5);
   assert.equal(mock.calls.previews.length, 5);
@@ -80,7 +82,8 @@ test("business searches request nearby chains/categories and recognize Queens ne
   const mock = fakePlaces({ places: [place] });
   const results = await searchLocations(mock.library, "bagel", COLUMBIA_LOCATION, {});
   assert.equal(mock.calls.searches[0].rankPreference, "DISTANCE");
-  assert.deepEqual(mock.calls.searches[0].locationBias.center, COLUMBIA_LOCATION);
+  assert.deepEqual(mock.calls.searches[0].locationRestriction, NYC_BOUNDS);
+  assert.equal(mock.calls.searches[0].locationBias, undefined);
   assert.equal(results[0].isInCity, true);
   assert.equal(results[0].address, place.formattedAddress);
   assert.equal(mock.calls.previews.length, 0);

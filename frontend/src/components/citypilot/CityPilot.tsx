@@ -1,100 +1,112 @@
 "use client";
 
-import { useState } from "react";
-import { ActiveTripView } from "@/components/citypilot/ActiveTripView";
+import { useEffect, useRef, useState } from "react";
 import { CityPilotMap } from "@/components/citypilot/CityPilotMap";
-import { LeaveTimeCard } from "@/components/citypilot/LeaveTimeCard";
-import { RouteTimeline } from "@/components/citypilot/RouteTimeline";
-import { TripBreakdown } from "@/components/citypilot/TripBreakdown";
+import { RouteComparison, RouteDetails } from "@/components/citypilot/RouteComparison";
 import { TripPlanner, type TravelMode } from "@/components/citypilot/TripPlanner";
 import { COLUMBIA_LOCATION, type Coordinates } from "@/lib/location-suggestions";
-
-type TripPhase = "planning" | "planned" | "active";
-type PlannedTrip = { leaveAt: string; eta: string; arriveBy: string; destination: string; mode: TravelMode };
-
-const planDurations: Record<TravelMode, { transit: number; driving: number; walking: number; buffer: number; total: number }> = {
-  Transit: { transit: 24, driving: 0, walking: 9, buffer: 6, total: 39 },
-  Drive: { transit: 0, driving: 31, walking: 4, buffer: 8, total: 43 },
-  Walk: { transit: 0, driving: 0, walking: 52, buffer: 10, total: 62 },
-};
-
-function formatTime(date: Date) {
-  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
-}
+import { compareRoutes, getRouteRecommendation } from "@/lib/route-options";
+import { routeErrorMessage, type RouteOption, type RouteRecommendation } from "@/lib/route-metrics";
 
 export function CityPilot({ initialDestination }: { initialDestination: string }) {
-  const [phase, setPhase] = useState<TripPhase>("planning");
   const [origin, setOrigin] = useState("Columbia University");
   const [originLocation, setOriginLocation] = useState<Coordinates | null>(COLUMBIA_LOCATION);
   const [destination, setDestination] = useState(initialDestination || "Smalls Jazz Club");
-  const [arriveByDate, setArriveByDate] = useState("2026-09-26");
-  const [arriveByTime, setArriveByTime] = useState("19:30");
+  const [destinationLocation, setDestinationLocation] = useState<Coordinates | null>(null);
+  const [arriveByDate, setArriveByDate] = useState("");
+  const [arriveByTime, setArriveByTime] = useState("");
   const [travelMode, setTravelMode] = useState<TravelMode>("Transit");
-  const [plannedTrip, setPlannedTrip] = useState<PlannedTrip | null>(null);
+  const [drivingCost, setDrivingCost] = useState("");
+  const [options, setOptions] = useState<RouteOption[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [recommendation, setRecommendation] = useState<RouteRecommendation | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const requestRef = useRef(0);
+  const aiController = useRef<AbortController | null>(null);
 
-  function planTrip() {
-    const deadline = new Date(`${arriveByDate}T${arriveByTime}:00`);
-    const eta = new Date(deadline.getTime() - 9 * 60_000);
-    const leaveAt = new Date(eta.getTime() - planDurations[travelMode].total * 60_000);
-    setPlannedTrip({ leaveAt: formatTime(leaveAt), eta: formatTime(eta), arriveBy: formatTime(deadline), destination, mode: travelMode });
-    setPhase("planned");
+  useEffect(() => {
+    const target = new Date(Date.now() + 60 * 60 * 1000);
+    const pad = (value: number) => String(value).padStart(2, "0");
+    setArriveByDate(`${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}`);
+    setArriveByTime(`${pad(target.getHours())}:${pad(target.getMinutes())}`);
+    return () => { requestRef.current += 1; aiController.current?.abort(); };
+  }, []);
+
+  function invalidate() {
+    requestRef.current += 1;
+    aiController.current?.abort();
+    setOptions([]); setRecommendation(null); setAiLoading(false); setAiError(""); setError(""); setBusy(false);
   }
 
+  async function planTrip() {
+    invalidate();
+    const request = requestRef.current;
+    const deadline = new Date(`${arriveByDate}T${arriveByTime}:00`);
+    const cost = drivingCost.trim() === "" ? null : Number(drivingCost);
+    if (!Number.isFinite(deadline.getTime()) || deadline.getTime() <= Date.now() || deadline.getTime() > Date.now() + 100 * 86400000) {
+      setError("Choose an arrival time in the future, within the next 100 days."); return;
+    }
+    if (cost != null && (!Number.isFinite(cost) || cost < 0 || cost > 100000)) {
+      setError("Enter a valid driving cost, or leave it blank."); return;
+    }
+    setBusy(true);
+    try {
+      const results = await compareRoutes(originLocation ?? `${origin}, New York City`, destinationLocation ?? `${destination}, New York City`, deadline, cost);
+      if (request !== requestRef.current) return;
+      setOptions(results); setBusy(false);
+      const available = results.filter((option) => option.metrics);
+      if (!available.length) return;
+      if (!available.some((option) => option.mode === travelMode)) setTravelMode(available[0].mode);
+      setAiLoading(true);
+      const controller = new AbortController();
+      aiController.current = controller;
+      const timeout = window.setTimeout(() => controller.abort(), 30000);
+      try {
+        const result = await getRouteRecommendation(available, controller.signal);
+        if (request === requestRef.current) setRecommendation(result);
+      } catch (cause) {
+        if (request === requestRef.current) setAiError(cause instanceof Error && cause.name !== "AbortError" && !(cause instanceof TypeError) ? cause.message : "Grok is unavailable right now. You can still compare and choose a route manually.");
+      } finally {
+        window.clearTimeout(timeout);
+        if (request === requestRef.current) setAiLoading(false);
+      }
+    } catch (cause) {
+      if (request === requestRef.current) { setError(routeErrorMessage(cause)); setBusy(false); }
+    }
+  }
+
+  const selected = options.find((option) => option.mode === travelMode && option.metrics);
   return (
     <div className="relative left-1/2 -mt-12 w-screen max-w-none -translate-x-1/2 px-5 pb-12 sm:px-8 xl:px-12 2xl:px-16">
       <div className="mx-auto max-w-[1600px]">
-        <header className="border-b border-[#e3e4e0] pb-5 pt-8 sm:pb-6 sm:pt-9">
-          <p className="mb-2 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0039a6]">
-            <span className="flex size-5 items-center justify-center rounded-full bg-[#0039a6] text-white"><span className="size-1.5 rounded-full bg-white" /></span>
-            NextStop
-          </p>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h1 className="text-[2.35rem] font-semibold leading-none tracking-[-0.055em] text-[#151719] sm:text-[2.8rem]">Get there on time.</h1>
-              <p className="mt-3 text-sm text-[#5f6469] sm:text-[15px]">Tell us when you need to arrive. We&apos;ll work backwards from there.</p>
-            </div>
-            {phase !== "planning" && <span className="mb-0.5 inline-flex items-center gap-2 rounded-full border border-[#dfe3e7] bg-white px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#5d6369]"><span className={`size-1.5 rounded-full ${phase === "active" ? "bg-[#d52e29]" : "bg-[#008044]"}`} />{phase === "active" ? "Trip preview" : "Plan ready"}</span>}
-          </div>
+        <header className="border-b border-[#e3e4e0] pb-6 pt-9">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0039a6]">NextStop</p>
+          <h1 className="text-[2.35rem] font-semibold leading-none tracking-[-0.055em] text-[#151719] sm:text-[2.8rem]">Find your best way there.</h1>
+          <p className="mt-3 text-sm text-[#5f6469]">Compare walking, driving, and transit. Let Grok weigh the tradeoffs.</p>
         </header>
-
         <section aria-label="NextStop trip workspace" className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1fr)] lg:gap-6">
           <div className="min-w-0">
-            {phase === "planning" && (
-              <TripPlanner
-                origin={origin}
-                destination={destination}
-                originLocation={originLocation}
-                arriveByDate={arriveByDate}
-                arriveByTime={arriveByTime}
-                travelMode={travelMode}
-                onOriginChange={(value) => { setOrigin(value); setOriginLocation(null); }}
-                onOriginSelect={(selected) => setOriginLocation(selected.location)}
-                onDestinationChange={setDestination}
-                onArriveByDateChange={setArriveByDate}
-                onArriveByTimeChange={setArriveByTime}
-                onTravelModeChange={setTravelMode}
-                onPlan={planTrip}
-              />
-            )}
-
-            {phase === "planned" && plannedTrip && (
-              <div className="space-y-5">
-                <LeaveTimeCard trip={plannedTrip} />
-                <RouteTimeline origin={origin} destination={plannedTrip.destination} mode={plannedTrip.mode} />
-                <TripBreakdown mode={plannedTrip.mode} />
-                <div className="flex flex-wrap gap-3">
-                  <button type="button" onClick={() => setPhase("active")} className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#0039a6] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#002d85]">Start trip <span aria-hidden="true">→</span></button>
-                  <button type="button" onClick={() => setPhase("planning")} className="min-h-12 rounded-xl border border-[#d9dcd9] bg-white px-5 text-sm font-semibold text-[#34393d] hover:bg-[#f3f4f1]">Edit trip</button>
-                </div>
-              </div>
-            )}
-
-            {phase === "active" && plannedTrip && <ActiveTripView trip={plannedTrip} onEnd={() => setPhase("planned")} />}
+            <TripPlanner origin={origin} destination={destination} originLocation={originLocation}
+              arriveByDate={arriveByDate} arriveByTime={arriveByTime} travelMode={travelMode} drivingCost={drivingCost} busy={busy}
+              onOriginChange={(value) => { invalidate(); setOrigin(value); setOriginLocation(null); }}
+              onOriginSelect={(location) => setOriginLocation(location.location)}
+              onDestinationChange={(value) => { invalidate(); setDestination(value); setDestinationLocation(null); }}
+              onDestinationSelect={(location) => setDestinationLocation(location.location)}
+              onArriveByDateChange={(value) => { invalidate(); setArriveByDate(value); }}
+              onArriveByTimeChange={(value) => { invalidate(); setArriveByTime(value); }}
+              onDrivingCostChange={(value) => { invalidate(); setDrivingCost(value); }}
+              onTravelModeChange={setTravelMode} onPlan={() => void planTrip()} />
+            {error && <p role="alert" className="mt-3 rounded-xl bg-[#fff1ee] p-4 text-sm text-[#b3261e]">{error}</p>}
+            {selected && <RouteDetails option={selected} origin={origin} destination={destination} />}
           </div>
-          <CityPilotMap />
+          <div className="min-w-0">
+            <RouteComparison options={options} selected={travelMode} onSelect={setTravelMode} recommendation={recommendation} aiLoading={aiLoading} aiError={aiError} />
+            <CityPilotMap route={selected?.route} />
+          </div>
         </section>
-
-        <p className="mt-5 text-center text-[10px] leading-4 text-[#767b80] sm:text-left">NextStop plans are illustrative previews. Live routing and service data are not connected yet.</p>
+        <p className="mt-5 text-[10px] leading-4 text-[#767b80]">Routes and schedules are estimates from Google Maps. Grok compares the available data; missing fares and wait times stay unknown. Route endpoints must be within the NYC map bounds.</p>
       </div>
     </div>
   );

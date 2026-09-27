@@ -10,16 +10,20 @@ const modes: { label: TravelMode; icon: "route" | "arrow-up-right" | "walk" }[] 
   { label: "Walk", icon: "walk" },
 ];
 
-export function TripPlanner({ origin, destination, originLocation, arriveByDate, arriveByTime, travelMode, onOriginChange, onOriginSelect, onDestinationChange, onArriveByDateChange, onArriveByTimeChange, onTravelModeChange, onPlan }: {
+export function TripPlanner({ origin, destination, originLocation, arriveByDate, arriveByTime, travelMode, drivingCost, busy, onDrivingCostChange, onOriginChange, onOriginSelect, onDestinationChange, onDestinationSelect, onArriveByDateChange, onArriveByTimeChange, onTravelModeChange, onPlan }: {
   origin: string;
   destination: string;
   originLocation: Coordinates | null;
+  drivingCost: string;
+  busy: boolean;
+  onDrivingCostChange: (value: string) => void;
   arriveByDate: string;
   arriveByTime: string;
   travelMode: TravelMode;
   onOriginChange: (value: string) => void;
   onOriginSelect: (location: SelectedLocation) => void;
   onDestinationChange: (value: string) => void;
+  onDestinationSelect: (location: SelectedLocation) => void;
   onArriveByDateChange: (value: string) => void;
   onArriveByTimeChange: (value: string) => void;
   onTravelModeChange: (value: TravelMode) => void;
@@ -42,7 +46,7 @@ export function TripPlanner({ origin, destination, originLocation, arriveByDate,
           <span className="size-2.5 shrink-0 rounded-full bg-[#151719] ring-2 ring-white" />
         </div>
         <LocationInput id="citypilot-origin" label="From" value={origin} placeholder="Starting location" origin={originLocation ?? NYC_CENTER} onChange={onOriginChange} onSelect={onOriginSelect} />
-        <LocationInput id="citypilot-destination" label="To" value={destination} placeholder="Address, place, or bagel shop…" origin={originLocation ?? NYC_CENTER} onChange={onDestinationChange} pinClassName="text-[#d52e29]" />
+        <LocationInput id="citypilot-destination" label="To" value={destination} placeholder="Address, place, or bagel shop…" origin={originLocation ?? NYC_CENTER} onChange={onDestinationChange} onSelect={onDestinationSelect} pinClassName="text-[#d52e29]" />
       </div>
       <p className="ml-8 mt-2 text-[10px] leading-4 text-[#777c81]">{originLocation ? "Distances are straight-line distances from your starting point." : "Distances are from Midtown Manhattan. Select a starting point for nearby matches."}</p>
 
@@ -61,7 +65,7 @@ export function TripPlanner({ origin, destination, originLocation, arriveByDate,
       </fieldset>
 
       <fieldset className="mt-6">
-        <legend className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#62666b]">How are you getting there?</legend>
+        <legend className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#62666b]">Preferred mode · we’ll compare all three</legend>
         <div className="grid grid-cols-3 gap-2">
           {modes.map((mode) => {
             const active = travelMode === mode.label;
@@ -74,8 +78,11 @@ export function TripPlanner({ origin, destination, originLocation, arriveByDate,
         </div>
       </fieldset>
 
-      <button type="submit" className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0039a6] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#002d85]">Plan my trip <Icon name="arrow-right" size={17} /></button>
-      <p className="mt-3 text-center text-[10px] leading-4 text-[#777c81]">A sample plan using illustrative travel times and buffers.</p>
+      <label className="mt-5 block text-xs text-[#62666b]">Driving cost estimate, optional ($)
+        <input type="number" min="0" max="100000" step="0.01" value={drivingCost} onChange={(event) => onDrivingCostChange(event.target.value)} placeholder="Fuel + tolls + parking" className="mt-2 h-11 w-full rounded-lg border border-[#d9dcd9] px-3 text-sm" />
+      </label>
+      <button type="submit" disabled={busy} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0039a6] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#002d85] disabled:opacity-60">{busy ? "Comparing routes…" : "Compare routes"} <Icon name="arrow-right" size={17} /></button>
+      <p className="mt-3 text-center text-[10px] leading-4 text-[#777c81]">Google route estimates, compared by Grok. Prices and schedules may change.</p>
     </form>
   );
 }
