@@ -1,0 +1,12 @@
+export type ChatRole = 'user' | 'assistant';
+export type ChatTurn = { role: ChatRole; content: string };
+export type TripLocation = { label: string; latitude?: number; longitude?: number; placeId?: string };
+export type PlaceResult = { type: string; id: string; name: string; lat: number; lon: number; routes?: string[] };
+export type DemoActivity = { id: string; kind: 'send' | 'split'; mode: 'demo'; simulated: true; asset: 'RLUSD'; amount: string; direction: 'sent'; counterparty: string; description: string; timestamp: string; transaction_hash: null; ledger_index: null };
+export type DemoWalletState = { balance: string; currency: 'RLUSD'; label: 'Demo RLUSD'; activity: DemoActivity[] };
+export type WalletSummary = { network: 'testnet'; available: boolean; configured: boolean; address: string | null; balances: { XRP: string | null; RLUSD: string | null }; rlusd_configured: boolean; trustline_active: boolean; account_active?: boolean | null; message?: string | null; demo: DemoWalletState };
+export type WalletTransaction = { id: string; hash: string; type: 'payment'; direction: 'received' | 'sent'; asset: 'RLUSD' | 'XRP'; amount: string; counterparty: string; status: 'confirmed' | 'pending'; timestamp?: string | null; ledger_index?: number | null; mode?: 'xrpl'; simulated?: false };
+export type WalletTransactions = { available: boolean; transactions: WalletTransaction[]; message?: string | null };
+export type DemoPaymentResult = { status: 'simulated'; mode: 'demo'; simulated: true; asset: 'RLUSD'; amount: string; balance: string; activity: DemoActivity; transaction_hash: null; ledger_index: null };
+export type DemoSplitResult = DemoPaymentResult & { total: string; participant_count: number; each: string };
+export type RouteOption = { mode: 'Transit' | 'Drive' | 'Walk'; durationMinutes?: number; distanceMeters?: number; cost?: number | null; currency?: string | null; departureTime?: string; arrivalTime?: string; polyline?: string; available: boolean; message?: string };

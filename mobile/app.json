@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "ChatNYC",
+    "slug": "chatnyc",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/chatnyc-icon.png",
+    "scheme": "chatnyc",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0039A6",
+        "foregroundImage": "./assets/images/chatnyc-icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/chatnyc-icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "ChatNYC uses your location when you choose Use my location to plan a trip."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/chatnyc-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0039A6"
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
