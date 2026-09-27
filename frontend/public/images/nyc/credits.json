@@ -1,0 +1,13 @@
+{
+  "note": "Illustrative stock photography from Unsplash, stored locally so the homepage does not depend on third-party image requests. Images are mood references, not representations of a specific business.",
+  "license": "https://unsplash.com/license",
+  "images": {
+    "hero.jpg": "https://images.unsplash.com/photo-1500916434205-0c77489c6cf7",
+    "pizza.jpg": "https://images.unsplash.com/photo-1513104890138-7c749659a591",
+    "park.jpg": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f",
+    "jazz.jpg": "https://images.unsplash.com/photo-1511192336575-5a79af67a629",
+    "museum.jpg": "https://images.unsplash.com/photo-1561214115-f2f134cc4912",
+    "waterfront.jpg": "https://images.unsplash.com/photo-1518391846015-55a9cc003b25",
+    "market.jpg": "https://images.unsplash.com/photo-1488459716781-31db52582fe9"
+  }
+}
