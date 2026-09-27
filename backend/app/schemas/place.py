@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -18,18 +16,3 @@ class PlaceIn(BaseModel):
         if not has_coords and not has_text:
             raise ValueError("Each place needs lat/lon or a query")
         return self
-
-
-class TripCreate(BaseModel):
-    origin: PlaceIn
-    destination: PlaceIn
-    depart_at: datetime | None = None
-    # plan backwards from a deadline, depart_at becomes the earliest leave time
-    arrive_by: datetime | None = None
-    buffer_minutes: int | None = Field(default=None, ge=0, le=60)
-
-
-class MeetingCreate(BaseModel):
-    trip_id: str = Field(min_length=1, max_length=32)
-    place_name: str = Field(min_length=1, max_length=200)
-    arrive_by: datetime | None = None
