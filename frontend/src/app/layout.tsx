@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { GoogleMapsProvider } from "@/components/GoogleMapsProvider";
 import { Navbar } from "@/components/Navbar";
 import { UserLocationProvider } from "@/hooks/useUserLocation";
 
@@ -22,6 +23,7 @@ const scrollRevealBootstrap = `
 `;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || process.env.GOOGLE_MAPS_API_KEY?.trim() || "";
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -29,6 +31,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className="flex min-h-screen flex-col" suppressHydrationWarning>
         <a className="skip-link" href="#main-content">Skip to content</a>
+        <GoogleMapsProvider apiKey={mapsKey}>
         <AuthProvider>
           <UserLocationProvider>
             <Navbar />
@@ -37,6 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </main>
           </UserLocationProvider>
         </AuthProvider>
+        </GoogleMapsProvider>
       </body>
     </html>
   );

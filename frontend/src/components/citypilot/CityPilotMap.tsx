@@ -11,7 +11,6 @@ const INITIAL_ZOOM = 12;
 const USER_ZOOM = 15;
 const MIN_ACCURACY_METERS = 20;
 const MAX_ACCURACY_METERS = 250;
-const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
 
 function isInsideNyc(location: UserLocation) {
   return location.latitude <= NYC_BOUNDS.north && location.latitude >= NYC_BOUNDS.south
@@ -21,11 +20,11 @@ function isInsideNyc(location: UserLocation) {
 export function CityPilotMap({ route, userLocation }: { route?: google.maps.routes.Route; userLocation?: UserLocation | null }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">(apiKey ? "loading" : "error");
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!apiKey || !container) return;
+    if (!container) return;
 
     let cancelled = false;
     let authenticationFailed = false;
