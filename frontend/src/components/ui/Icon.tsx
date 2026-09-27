@@ -20,6 +20,7 @@ const paths = {
   search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></>,
   music: <><path d="M9 18V5l11-2v13M9 8l11-2" /><ellipse cx="6" cy="18" rx="3" ry="2" /><ellipse cx="17" cy="16" rx="3" ry="2" /></>,
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></>,
+  wallet: <><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H18a2 2 0 0 1 2 2v12H6.5A2.5 2.5 0 0 1 4 15.5v-9Z" /><path d="M4 8h16M15 11h6v4h-6a2 2 0 0 1 0-4Z" /></>,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof paths;

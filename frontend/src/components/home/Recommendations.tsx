@@ -1,7 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { TransitBadge, type SubwayLine } from "@/components/ui/TransitBadge";
+import { useScrollReveal } from "@/components/ui/useScrollReveal";
 
 /** Shape for future place-service results; current entries below are demo-only. */
 type OckPlaceRecommendation = {
@@ -65,20 +69,25 @@ function recommendationImage(place: OckPlaceRecommendation) {
 }
 
 export function OckRecommendations() {
+  const eyebrowReveal = useScrollReveal({ duration: 600, once: false });
+  const headingReveal = useScrollReveal({ delay: 75, duration: 600, once: false });
+  const descriptionReveal = useScrollReveal({ delay: 145, duration: 600, once: false });
+  const cardsReveal = useScrollReveal({ delay: 210, duration: 700, scale: 0.98, once: false });
+
   return (
     <section aria-labelledby="ock-recommendations-heading" className="border-t border-[#e4e5e2] pb-8 pt-8 sm:pb-10 sm:pt-9">
       <div>
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#656862]">A little local intuition</p>
-        <h2 id="ock-recommendations-heading" className="text-[27px] font-semibold leading-tight tracking-[-0.045em] text-[#151719] sm:text-[32px]">Ock thinks you&apos;d like...</h2>
-        <p className="mt-2 text-sm leading-6 text-[#656862]">Based on what you&apos;ve told Ock.</p>
+        <p {...eyebrowReveal} className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#656862]">A little local intuition</p>
+        <h2 {...headingReveal} id="ock-recommendations-heading" className="text-[27px] font-semibold leading-tight tracking-[-0.045em] text-[#151719] sm:text-[32px]">Ock thinks you&apos;d like...</h2>
+        <p {...descriptionReveal} className="mt-2 text-sm leading-6 text-[#656862]">Based on what you&apos;ve told Ock.</p>
       </div>
 
-      <ul className="mt-5 grid list-none gap-3 p-0 md:grid-cols-3 sm:gap-4">
-        {recommendations.map((place) => (
-          <li key={place.placeId}>
-            <article className="h-full overflow-hidden rounded-[14px] border border-[#e1e3e0] bg-white">
+      <ul {...cardsReveal} className="home-place-list mt-5 grid list-none gap-3 p-0 md:grid-cols-3 sm:gap-4">
+        {recommendations.map((place, index) => (
+          <li key={place.placeId} style={{ "--card-index": index } as CSSProperties}>
+            <article className="home-place-card group h-full overflow-hidden rounded-[14px] border border-[#e1e3e0] bg-white">
               <div className="relative aspect-[16/10] overflow-hidden bg-[#e9e9e5]">
-                <Image src={recommendationImage(place)} alt={place.imageAlt} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" />
+                <Image src={recommendationImage(place)} alt={place.imageAlt} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="home-place-image object-cover" />
                 <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-bold tracking-[0.12em] text-[#30363b]">{place.category}</span>
                 {place.price && <span className="absolute bottom-3 right-3 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-[#30363b]">{place.price}</span>}
               </div>
@@ -92,8 +101,8 @@ export function OckRecommendations() {
                   </div>
                   {place.photoAttribution && <span className="text-[9px] text-[#737a7f]">{place.photoAttribution}</span>}
                 </div>
-                <Link href={`/assistant?q=${encodeURIComponent(place.prompt)}`} prefetch={false} className="group mt-4 inline-flex items-center gap-1 text-[11px] font-semibold text-[#0039A6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0039A6]">
-                  Ask Ock about this <Icon name="arrow-right" size={14} className="transition-transform group-hover:translate-x-0.5" />
+                <Link href={`/assistant?q=${encodeURIComponent(place.prompt)}`} prefetch={false} className="home-place-link mt-4 inline-flex items-center gap-1 text-[11px] font-semibold text-[#0039A6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0039A6]">
+                  Ask Ock about this <Icon name="arrow-right" size={14} className="home-place-arrow transition-transform duration-200" />
                 </Link>
               </div>
             </article>

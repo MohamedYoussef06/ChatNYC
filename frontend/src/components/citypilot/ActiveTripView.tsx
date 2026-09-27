@@ -1,3 +1,4 @@
+// Dormant legacy preview. Nothing on /navigate imports this. The instruction and progress below are sample copy, not a live trip.
 import { Icon } from "@/components/ui/Icon";
 import { TransitBadge } from "@/components/ui/TransitBadge";
 import type { TravelMode } from "@/components/citypilot/TripPlanner";

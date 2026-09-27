@@ -10,7 +10,7 @@ export function ChatMessage({ message }: { message: ConversationMessage }) {
   const isUser = message.role === "user";
 
   return (
-    <article className="border-b border-[#eceeea] pb-3 last:border-0" aria-label={isUser ? "Your request" : "Ock response"}>
+    <article className="ock-chat-message border-b border-[#eceeea] pb-3 last:border-0" aria-label={isUser ? "Your request" : "Ock response"}>
       <div className="flex items-start gap-2.5">
         {!isUser && <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md bg-[#0039a6] text-white" aria-hidden="true"><Icon name="bagel" size={12} /></span>}
         <div className="min-w-0">

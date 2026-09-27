@@ -1,3 +1,4 @@
+// Dormant legacy preview. Nothing on /navigate imports this. The times and stops below are sample copy, not a live route.
 import { TransitBadge, type SubwayLine } from "@/components/ui/TransitBadge";
 import type { TravelMode } from "@/components/citypilot/TripPlanner";
 

@@ -19,6 +19,7 @@ async def recommend_route(request: RecommendationRequest) -> RouteRecommendation
                         "Null means unknown, never zero. Driving cost excludes fuel, tolls and parking unless a user estimate is supplied. "
                         "Transfer wait excludes waiting before the first vehicle; service headway is time between vehicles, not actual wait. "
                         "Do not invent prices, delays, accessibility, service reliability, or savings. "
+                        "Do not state a duration, departure, arrival, distance, fare, toll, traffic condition, or disruption unless that fact is in the supplied metrics. "
                         "If no option can arrive on time, explicitly say so. "
                         "Give a concise reason comparing the options and 1-3 tradeoffs, including material missing data."
                     )},

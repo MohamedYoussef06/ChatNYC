@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Icon } from "@/components/ui/Icon";
+import type { UserLocationError, UserLocationStatus } from "@/hooks/useUserLocation";
 import { loadGoogleMapsLibrary } from "@/lib/google-maps";
 import { googleMapsSearchUrl, locationSearchErrorMessage, resolveLocation, searchLocations, type Coordinates, type LocationSuggestion, type SelectedLocation } from "@/lib/location-suggestions";
 
@@ -14,9 +15,13 @@ type Props = {
   onChange: (value: string) => void;
   onSelect?: (location: SelectedLocation) => void;
   pinClassName?: string;
+  locationStatus?: UserLocationStatus;
+  locationError?: UserLocationError | null;
+  usingCurrentLocation?: boolean;
+  onUseCurrentLocation?: () => void;
 };
 
-export function LocationInput({ id, label, value, placeholder, origin, onChange, onSelect, pinClassName = "text-[#0039a6]" }: Props) {
+export function LocationInput({ id, label, value, placeholder, origin, onChange, onSelect, pinClassName = "text-[#0039a6]", locationStatus, locationError, usingCurrentLocation, onUseCurrentLocation }: Props) {
   const [open, setOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -25,7 +30,9 @@ export function LocationInput({ id, label, value, placeholder, origin, onChange,
   const sessionRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const requestRef = useRef(0);
   const listId = `${id}-suggestions`;
-  const showDropdown = open && value.trim().length >= 3;
+  const popupId = `${id}-popup`;
+  const hasSearchQuery = value.trim().length >= 3;
+  const showSuggestions = open && hasSearchQuery;
 
   useEffect(() => {
     if (!open || value.trim().length < 3) return;
@@ -85,11 +92,11 @@ export function LocationInput({ id, label, value, placeholder, origin, onChange,
       requestRef.current += 1;
       setOpen(false);
       setActiveIndex(-1);
-    } else if (showDropdown && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+    } else if (showSuggestions && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
       event.preventDefault();
       if (!suggestions.length) return;
       setActiveIndex((index) => event.key === "ArrowDown" ? (index + 1) % suggestions.length : (index <= 0 ? suggestions.length - 1 : index - 1));
-    } else if (event.key === "Enter" && (showDropdown || status === "selecting")) {
+    } else if (event.key === "Enter" && (showSuggestions || status === "selecting")) {
       event.preventDefault();
       if (activeIndex >= 0 && suggestions[activeIndex]) void selectSuggestion(suggestions[activeIndex]);
     }
@@ -100,12 +107,12 @@ export function LocationInput({ id, label, value, placeholder, origin, onChange,
       if (!event.currentTarget.contains(event.relatedTarget)) { setOpen(false); setActiveIndex(-1); }
     }}>
       <label htmlFor={id} className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#62666b]">{label}</label>
-      <div className="flex h-12 items-center gap-2.5 rounded-lg border border-[#d9dcd9] bg-white px-3 focus-within:border-[#0039a6] focus-within:ring-2 focus-within:ring-[#0039a6]/10">
+      <div className="nextstop-location-input flex h-12 items-center gap-2.5 rounded-lg border border-[#d9dcd9] bg-white px-3 focus-within:border-[#0039a6] focus-within:ring-2 focus-within:ring-[#0039a6]/10">
         <Icon name="pin" size={17} className={`shrink-0 ${pinClassName}`} />
         <input
           id={id} required value={value} placeholder={placeholder} autoComplete="off" spellCheck={false}
-          role="combobox" aria-autocomplete="list" aria-expanded={showDropdown} aria-controls={showDropdown ? listId : undefined}
-          aria-activedescendant={showDropdown && activeIndex >= 0 ? `${id}-option-${activeIndex}` : undefined}
+          role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? popupId : undefined}
+          aria-activedescendant={showSuggestions && activeIndex >= 0 ? `${id}-option-${activeIndex}` : undefined}
           aria-describedby={`${id}-status`}
           onFocus={() => setOpen(true)}
           onChange={(event) => {
@@ -122,29 +129,40 @@ export function LocationInput({ id, label, value, placeholder, origin, onChange,
         />
       </div>
       <span id={`${id}-status`} role="status" className="sr-only">
-        {status === "loading" ? "Searching locations" : status === "selecting" ? "Selecting location" : status === "ready" && open ? `${suggestions.length} suggestions. Use up and down arrows, then Enter to select.` : status === "error" ? errorMessage : ""}
+        {status === "loading" ? "Searching locations" : status === "selecting" ? "Selecting location" : status === "ready" && open ? `${suggestions.length} suggestions. Use up and down arrows, then Enter to select.` : status === "error" ? errorMessage : open && !hasSearchQuery ? `Search for a location by name or address.${onUseCurrentLocation ? " Use my location is available." : ""}` : ""}
       </span>
-      {showDropdown && (
-        <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-[#dce2ea] bg-white shadow-[0_12px_32px_rgba(21,23,25,0.16)]">
-          <ul id={listId} role="listbox" aria-label={`${label} location suggestions`} aria-busy={status === "loading"} className="m-0 list-none p-0">
-            {suggestions.map((suggestion, index) => (
-              <li key={suggestion.id} id={`${id}-option-${index}`} role="option" aria-selected={activeIndex === index}
-                onMouseDown={(event) => event.preventDefault()}
-                onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => void selectSuggestion(suggestion)}
-                className={`flex cursor-pointer items-start gap-3 border-b border-[#eef0f2] px-3 py-3 text-left last:border-b-0 ${activeIndex === index ? "bg-[#eef3fb]" : "hover:bg-[#f7f9fc]"}`}>
-                <Icon name="pin" size={16} className="mt-0.5 shrink-0 text-[#0039a6]" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[#191c1e]">{suggestion.name}</p>
-                  <p className="mt-0.5 text-xs leading-5 text-[#686e73]">{suggestion.address}</p>
-                </div>
-                {suggestion.distanceMeters !== undefined && <span className="shrink-0 pt-0.5 text-[10px] text-[#767b80]">{(suggestion.distanceMeters / 1609.344).toFixed(1)} mi</span>}
-              </li>
-            ))}
-          </ul>
-          {status === "loading" && <p className="px-4 py-4 text-xs text-[#686e73]">Searching locations…</p>}
-          {status === "ready" && !suggestions.length && <p className="px-4 py-4 text-xs text-[#686e73]">No matches. Try adding a street or neighborhood.</p>}
-          {status === "error" && (
+      {open && (
+        <div id={popupId} className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-[#dce2ea] bg-white shadow-[0_12px_32px_rgba(21,23,25,0.16)]">
+          {onUseCurrentLocation && (
+            <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setOpen(false); onUseCurrentLocation(); }} disabled={locationStatus === "requesting"} className="flex min-h-12 w-full items-center gap-3 border-b border-[#eef0f2] px-3 text-left text-xs font-semibold text-[#0039a6] disabled:cursor-wait disabled:opacity-60">
+              <Icon name="pin" size={16} />{locationStatus === "requesting" ? "Finding your location…" : usingCurrentLocation ? "Current location selected" : "Use my location"}
+            </button>
+          )}
+          {!hasSearchQuery ? (
+            <p className="px-4 py-4 text-xs text-[#686e73]">Search for a location by name or address.</p>
+          ) : (
+            <>
+              <ul id={listId} role="listbox" aria-label={`${label} location suggestions`} aria-busy={status === "loading"} className="m-0 list-none p-0">
+                {suggestions.map((suggestion, index) => (
+                  <li key={suggestion.id} id={`${id}-option-${index}`} role="option" aria-selected={activeIndex === index}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onClick={() => void selectSuggestion(suggestion)}
+                    className={`flex cursor-pointer items-start gap-3 border-b border-[#eef0f2] px-3 py-3 text-left last:border-b-0 ${activeIndex === index ? "bg-[#eef3fb]" : "hover:bg-[#f7f9fc]"}`}>
+                    <Icon name="pin" size={16} className="mt-0.5 shrink-0 text-[#0039a6]" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-[#191c1e]">{suggestion.name}</p>
+                      <p className="mt-0.5 text-xs leading-5 text-[#686e73]">{suggestion.address}</p>
+                    </div>
+                    {suggestion.distanceMeters !== undefined && <span className="shrink-0 pt-0.5 text-[10px] text-[#767b80]">{(suggestion.distanceMeters / 1609.344).toFixed(1)} mi</span>}
+                  </li>
+                ))}
+              </ul>
+              {status === "loading" && <p className="px-4 py-4 text-xs text-[#686e73]">Searching locations…</p>}
+              {status === "ready" && !suggestions.length && <p className="px-4 py-4 text-xs text-[#686e73]">No matches. Try adding a street or neighborhood.</p>}
+            </>
+          )}
+          {hasSearchQuery && status === "error" && (
             <div className="px-4 py-4">
               <p className="text-xs leading-5 text-[#686e73]">{errorMessage} You can still enter an address.</p>
               <a href={googleMapsSearchUrl(value)} target="_blank" rel="noopener noreferrer"
@@ -159,6 +177,7 @@ export function LocationInput({ id, label, value, placeholder, origin, onChange,
           </div>
         </div>
       )}
+      {locationError && <p role="status" className="mt-1 text-[10px] leading-4 text-[#62666b]">{locationError.message}</p>}
       {!open && status === "error" && <p className="mt-1 text-xs text-[#686e73]">{errorMessage}</p>}
     </div>
   );

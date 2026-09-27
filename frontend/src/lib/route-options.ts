@@ -1,10 +1,10 @@
 import { loadGoogleMapsLibrary } from "@/lib/google-maps";
 import { NYC_BOUNDS, type Coordinates } from "@/lib/location-suggestions";
-import { routeErrorMessage, summarizeRoute, type RouteMode, type RouteOption, type RouteRecommendation } from "@/lib/route-metrics";
+import { routeErrorMessage, summarizeRoute, type RouteMetrics, type RouteMode, type RouteOption, type RouteRecommendation } from "@/lib/route-metrics";
 
 const MODES = { Walk: "WALKING", Drive: "DRIVING", Transit: "TRANSIT" } as const;
 
-export async function compareRoutes(origin: string | Coordinates, destination: string | Coordinates, deadline: Date, drivingCost: number | null): Promise<RouteOption[]> {
+export async function compareRoutes(origin: string | Coordinates, destination: string | Coordinates, deadline: Date): Promise<RouteOption[]> {
   const { Route } = await loadGoogleMapsLibrary("routes");
   const now = new Date();
   return Promise.all((Object.keys(MODES) as RouteMode[]).map(async (mode) => {
@@ -30,15 +30,21 @@ export async function compareRoutes(origin: string | Coordinates, destination: s
       if (endpoints.some((point) => point && (point.lat < NYC_BOUNDS.south || point.lat > NYC_BOUNDS.north || point.lng < NYC_BOUNDS.west || point.lng > NYC_BOUNDS.east))) {
         throw new Error("Route endpoints outside NYC bounds");
       }
-      return summarizeRoute(route, mode, deadline, now, drivingCost);
+      return summarizeRoute(route, mode, deadline, now, null);
     } catch (error) { return { mode, error: routeErrorMessage(error) }; }
   }));
+}
+
+function metricsForRecommendation(metrics: RouteMetrics) {
+  const { costDetails, ...summary } = metrics;
+  void costDetails;
+  return summary;
 }
 
 export async function getRouteRecommendation(options: RouteOption[], signal: AbortSignal): Promise<RouteRecommendation> {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/trips/recommend`, {
     method: "POST", headers: { "Content-Type": "application/json" }, signal,
-    body: JSON.stringify({ options: options.flatMap((option) => option.metrics ? [option.metrics] : []) }),
+    body: JSON.stringify({ options: options.flatMap((option) => option.metrics ? [metricsForRecommendation(option.metrics)] : []) }),
   });
   if (!response.ok) {
     const data = await response.json().catch(() => null);

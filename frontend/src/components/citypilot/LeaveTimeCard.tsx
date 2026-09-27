@@ -1,3 +1,4 @@
+// Dormant legacy preview. Nothing on /navigate imports this. The early-arrival line is sample copy, not a calculated buffer.
 import { Icon } from "@/components/ui/Icon";
 
 export function LeaveTimeCard({ trip }: { trip: { leaveAt: string; eta: string; arriveBy: string } }) {

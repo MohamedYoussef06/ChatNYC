@@ -31,27 +31,27 @@ export function Hero() {
       aria-labelledby="hero-title"
       className="grid items-center gap-9 pb-10 pt-9 sm:gap-12 sm:pb-12 sm:pt-12 lg:grid-cols-[1.08fr_1fr] lg:gap-14 lg:pb-12 lg:pt-14"
     >
-      <div>
-        <p className="mb-5 flex items-center gap-2 text-[10px] font-bold tracking-[0.15em] text-[#585f63] sm:text-[11px]">
+      <div className="home-hero-copy">
+        <p className="home-hero-entrance home-hero-eyebrow mb-5 flex items-center gap-2 text-[10px] font-bold tracking-[0.15em] text-[#585f63] sm:text-[11px]">
           <span className="h-2 w-2 shrink-0 rounded-full bg-[#0039A6]" aria-hidden="true" />
           OCK · YOUR NYC SIDEKICK
         </p>
 
         <h1
           id="hero-title"
-          className="text-[56px] leading-[0.98] font-black tracking-[-0.065em] text-[#151719] sm:text-[76px] lg:text-[84px] xl:text-[90px]"
+          className="home-hero-entrance home-hero-title text-[56px] leading-[0.98] font-black tracking-[-0.065em] text-[#151719] sm:text-[76px] lg:text-[84px] xl:text-[90px]"
         >
           <span className="block">Make NYC</span>{" "}
           <span className="block text-[#0039A6]">yours.</span>
         </h1>
 
-        <p className="mt-5 max-w-[440px] text-[15px] leading-[1.75] text-[#62666b] sm:text-[16px]">
+        <p className="home-hero-entrance home-hero-support mt-5 max-w-[440px] text-[15px] leading-[1.75] text-[#62666b] sm:text-[16px]">
           Your NYC sidekick for finding places, making plans, getting around, and figuring out what&apos;s next.
         </p>
 
         <form
           onSubmit={handleSubmit}
-          className="mt-7 flex items-center gap-2 rounded-[14px] border border-[#d9ddde] bg-white p-2 pl-4 shadow-[0_3px_12px_rgba(20,28,38,0.035)] sm:pl-5"
+          className="home-hero-entrance home-hero-composer home-composer mt-7 flex items-center gap-2 rounded-[14px] border border-[#d9ddde] bg-white p-2 pl-4 shadow-[0_3px_12px_rgba(20,28,38,0.035)] sm:pl-5"
           role="search"
         >
           <Icon name="bagel" size={19} className="shrink-0 text-[#0039A6]" />
@@ -70,13 +70,13 @@ export function Hero() {
           <button
             type="submit"
             aria-label="Start a conversation with Ock"
-            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-[9px] bg-[#0039A6] text-white transition-colors hover:bg-[#002e86]"
+            className="home-submit-button group flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-[9px] bg-[#0039A6] text-white transition-[background-color,transform,box-shadow] duration-200 active:scale-[0.96]"
           >
-            <Icon name="arrow-right" size={21} />
+            <Icon name="arrow-right" size={21} className="home-submit-arrow transition-transform duration-200 group-active:translate-x-1" />
           </button>
         </form>
 
-        <div className="mt-3.5 flex flex-wrap items-center gap-2" role="group" aria-label="Try a search">
+        <div className="home-hero-entrance home-hero-suggestions mt-3.5 flex flex-wrap items-center gap-2" role="group" aria-label="Try a search">
           <span className="mr-0.5 text-[11px] text-[#62666b]">Try:</span>
           {suggestions.map((suggestion) => (
             <button
@@ -86,7 +86,7 @@ export function Hero() {
                 setQuery(suggestion.query);
                 search(suggestion.query);
               }}
-              className="cursor-pointer rounded-full border border-[#e1e3e1] bg-[#f4f4f0] px-2.5 py-1.5 text-[10px] font-medium text-[#555c61] transition-colors hover:border-[#bbc7dc] hover:bg-[#edf2fb] hover:text-[#0039A6] sm:text-[11px]"
+              className="home-suggestion-chip cursor-pointer rounded-full border border-[#e1e3e1] bg-[#f4f4f0] px-2.5 py-1.5 text-[10px] font-medium text-[#555c61] transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.98] sm:text-[11px]"
             >
               {suggestion.label}
             </button>
@@ -94,7 +94,7 @@ export function Hero() {
         </div>
       </div>
 
-      <div className="relative h-[280px] overflow-hidden rounded-[20px] bg-[#d8dde0] sm:h-[350px] lg:h-[410px]">
+      <div className="home-hero-visual relative h-[280px] overflow-hidden rounded-[20px] bg-[#d8dde0] sm:h-[350px] lg:h-[410px]">
         <Image
           src="/images/nyc/hero.jpg"
           alt="A yellow cab on a tree-lined Manhattan avenue with the Chrysler Building in the distance"
@@ -112,7 +112,7 @@ export function Hero() {
         <svg
           viewBox="0 0 170 220"
           fill="none"
-          className="pointer-events-none absolute right-0 bottom-0 h-[215px] w-[165px]"
+          className="home-hero-route pointer-events-none absolute right-0 bottom-0 h-[215px] w-[165px]"
           aria-hidden="true"
         >
           <path
@@ -129,7 +129,7 @@ export function Hero() {
           <circle cx="20" cy="176" r="7" fill="white" stroke="#0039A6" strokeWidth="3.5" />
         </svg>
 
-        <div className="absolute bottom-5 left-5 flex max-w-[calc(100%_-_6rem)] items-center gap-3 rounded-[12px] bg-white px-4 py-3.5 shadow-[0_4px_20px_rgba(0,0,0,0.08)] sm:bottom-6 sm:left-6 sm:px-5">
+        <div className="home-nextstop-card absolute bottom-5 left-5 flex max-w-[calc(100%_-_6rem)] items-center gap-3 rounded-[12px] bg-white px-4 py-3.5 shadow-[0_4px_20px_rgba(0,0,0,0.08)] sm:bottom-6 sm:left-6 sm:px-5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0039A6] text-white" aria-hidden="true">
             <Icon name="arrow-up-right" size={24} />
           </span>

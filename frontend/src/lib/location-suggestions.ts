@@ -1,4 +1,10 @@
 export type Coordinates = { lat: number; lng: number };
+export type TripLocation = {
+  label: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
+};
 export const COLUMBIA_LOCATION: Coordinates = { lat: 40.8075, lng: -73.9626 };
 export const NYC_CENTER: Coordinates = { lat: 40.7549, lng: -73.984 };
 export const NYC_BOUNDS = { north: 40.9176, south: 40.4774, east: -73.7004, west: -74.2591 };
@@ -15,7 +21,7 @@ export type LocationSuggestion = {
   place?: google.maps.places.Place;
 };
 
-export type SelectedLocation = { label: string; location: Coordinates };
+export type SelectedLocation = TripLocation;
 
 export function locationSearchErrorMessage(error: unknown): string {
   const message = error && typeof error === "object" && "message" in error ? String(error.message) : "";
@@ -162,6 +168,8 @@ export async function resolveLocation(suggestion: LocationSuggestion): Promise<S
   const name = place.displayName ?? suggestion.name;
   return {
     label: address.startsWith(name) ? address : `${name}, ${address}`,
-    location: place.location.toJSON(),
+    latitude: place.location.lat(),
+    longitude: place.location.lng(),
+    placeId: suggestion.id,
   };
 }

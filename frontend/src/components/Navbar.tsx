@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useAuthMode } from "@/components/auth/AuthProvider";
 import { Icon } from "@/components/ui/Icon";
 import { Wordmark } from "@/components/ui/Wordmark";
+import { useUserLocation } from "@/hooks/useUserLocation";
 
 const links = [
   { href: "/assistant", label: "Ock" },
@@ -13,7 +15,54 @@ const links = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const { userMode } = useAuthMode();
+  const router = useRouter();
+  const { userMode, setUserMode } = useAuthMode();
+  const userLocation = useUserLocation();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setProfileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    profileMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+
+    function handlePointerDown(event: PointerEvent) {
+      if (event.target instanceof Node && !profileMenuRef.current?.contains(event.target)) setProfileOpen(false);
+    }
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setProfileOpen(false);
+      profileButtonRef.current?.focus();
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [profileOpen]);
+
+  function handleMenuKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (!profileMenuRef.current || !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const items = Array.from(profileMenuRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]')).filter((item) => !item.hasAttribute("disabled"));
+    if (!items.length) return;
+    event.preventDefault();
+    const current = items.indexOf(document.activeElement as HTMLElement);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : event.key === "ArrowDown" ? (current + 1) % items.length : (current <= 0 ? items.length - 1 : current - 1);
+    items[next]?.focus();
+  }
+
+  const locationLabel = userLocation.status === "granted" ? "Available"
+    : userLocation.status === "requesting" ? "Requesting…"
+      : userLocation.status === "denied" ? "Permission denied"
+        : userLocation.status === "unavailable" ? "Unavailable"
+          : "Not shared";
 
   if (pathname === "/") return null;
 
@@ -47,9 +96,55 @@ export function Navbar() {
               <span className="min-[640px]:hidden">Create account</span>
             </Link>
           )}
-          <Link href="/profile" prefetch={false} aria-label="Open profile and account settings" title="Profile and account settings" aria-current={pathname === "/profile" ? "page" : undefined} className={`flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors ${pathname === "/profile" ? "border-[#aebfdd] bg-[#edf2fb] text-[#0039a6]" : "border-[#d9dcdf] bg-white text-[#535b61] hover:border-[#0039a6] hover:text-[#0039a6]"}`}>
-            <Icon name="user" size={17} />
-          </Link>
+          <div ref={profileMenuRef} className="relative" onKeyDown={handleMenuKeyDown} onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setProfileOpen(false);
+          }}>
+            <button ref={profileButtonRef} type="button" aria-label="Open profile and account menu" title="Profile and account menu" aria-haspopup="menu" aria-expanded={profileOpen} aria-controls="profile-menu" onClick={() => setProfileOpen((open) => !open)} className={`profile-menu-trigger flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors ${pathname === "/profile" || pathname === "/wallet" || profileOpen ? "border-[#aebfdd] bg-[#edf2fb] text-[#0039a6]" : "border-[#d9dcdf] bg-white text-[#535b61]"}`}>
+              <Icon name="user" size={17} />
+            </button>
+
+            <div id="profile-menu" role="menu" aria-label="Profile and account" aria-hidden={!profileOpen} data-state={profileOpen ? "open" : "closed"} className="profile-menu absolute right-0 top-[calc(100%+10px)] z-50 w-[min(260px,calc(100vw-2.5rem))] overflow-hidden rounded-[13px] border border-[#dfe2df] bg-[#fffefa] text-left font-normal tracking-normal text-[#252a2e] shadow-[0_12px_32px_rgba(21,23,25,0.13)]">
+              <Link href="/profile" prefetch={false} role="menuitem" onClick={() => setProfileOpen(false)} className="profile-menu-row block px-4 py-3.5">
+                <span className="block text-xs font-semibold">{userMode === "authenticated" ? "Account" : "Guest"}</span>
+                <span className="mt-0.5 block text-[10px] text-[#747b80]">{userMode === "authenticated" ? "Signed in" : "Not signed in"}</span>
+              </Link>
+
+              <Link href="/wallet" prefetch={false} role="menuitem" aria-current={pathname === "/wallet" ? "page" : undefined} onClick={() => setProfileOpen(false)} className="profile-menu-row flex items-center justify-between gap-4 border-t border-[#e8eae7] px-4 py-3">
+                <span><span className="block text-xs font-semibold">Wallet</span><span className="mt-0.5 block text-[10px] text-[#747b80]">Demo wallet</span></span>
+                <Icon name="wallet" size={15} className="shrink-0 text-[#0039a6]" />
+              </Link>
+
+              <div role="none" className="border-t border-[#e8eae7] px-4 py-3">
+                <span className="block text-xs font-semibold">Ock memory</span>
+                <span className="mt-0.5 block text-[10px] text-[#747b80]">{userMode === "authenticated" ? "Demo only · not saved" : "Sign in to enable"}</span>
+              </div>
+
+              <button type="button" role="menuitem" disabled={userLocation.status === "requesting"} onClick={() => {
+                setProfileOpen(false);
+                profileButtonRef.current?.focus();
+                void userLocation.requestLocation();
+              }} className="profile-menu-row flex w-full items-center justify-between gap-4 border-t border-[#e8eae7] px-4 py-3 text-left disabled:cursor-wait disabled:opacity-65">
+                <span><span className="block text-xs font-semibold">Location</span><span className="mt-0.5 block text-[10px] text-[#747b80]">{locationLabel}</span></span>
+                <Icon name="pin" size={15} className="shrink-0 text-[#0039a6]" />
+              </button>
+
+              <div role="none" className="border-t border-[#e8eae7] p-1.5">
+                {userMode === "authenticated" ? (
+                  <button type="button" role="menuitem" onClick={() => {
+                    setProfileOpen(false);
+                    setUserMode(null);
+                    router.push("/");
+                  }} className="profile-menu-row flex min-h-10 w-full items-center justify-between rounded-lg px-2.5 text-left text-xs font-semibold text-[#0039a6]">
+                    Sign out <Icon name="arrow-right" size={14} />
+                  </button>
+                ) : (
+                  <Link href="/?mode=login" prefetch={false} role="menuitem" onClick={() => setProfileOpen(false)} className="profile-menu-row flex min-h-10 items-center justify-between rounded-lg px-2.5 text-xs font-semibold text-[#0039a6]">
+                    Sign in <Icon name="arrow-right" size={14} />
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </header>
