@@ -9,8 +9,8 @@ flowchart LR
   apiTs --> fastapi[FastAPI routers]
   imessage[messaging imessage handler] --> backendTs[messaging/src/api/backend.ts]
   backendTs --> fastapi
-  fastapi --> core[core stubs]
-  fastapi --> services[service stubs]
+  fastapi --> core[core CityPilot]
+  fastapi --> services[maps multimodal + Grok]
 ```
 
 ## frontend
@@ -28,7 +28,7 @@ Next.js App Router in `frontend/src/app`. Discover, Navigate, and Profile read J
 | `app/main.py` | Create the application, configure middleware, register routers | FastAPI, CORS, health endpoint |
 | `app/api/` | Handle HTTP requests and WebSocket connections | `assistant.py`, `discover.py`, `trips.py`, `users.py`, `websocket.py` |
 | `app/core/` | Coordinate application behavior | `citypilot.py`, `recommendations.py`, `personalization.py` |
-| `app/services/` | Wrap external provider APIs and their current stubs | Grok, Backboard, ElevenLabs, maps, NYC Open Data |
+| `app/services/` | Wrap external provider APIs | Grok (chat + mode recommend), maps (walk/drive/transit), Backboard, ElevenLabs, NYC Open Data |
 | `app/models/` | Describe persisted entities with SQLAlchemy | User, preference, place, trip |
 | `app/schemas/` | Validate and describe API request and response data with Pydantic | Assistant messages, places, trips, user profiles |
 | `app/db/` | Manage connections and database access | `database.py`, reserved `repositories/` package |

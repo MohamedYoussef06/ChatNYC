@@ -9,7 +9,18 @@ export default async function NavigatePage() {
     return (
       <>
         <h1>Navigate</h1>
-        {trip ? <Map origin={trip.origin} destination={trip.destination} /> : null}
+        <p className="lede">
+          Compare walking, driving, and transit. Grok highlights a recommended option when an API
+          key is configured.
+        </p>
+        {trip ? (
+          <Map
+            origin={trip.origin}
+            destination={trip.destination}
+            options={trip.options ?? []}
+            recommendedMode={trip.recommendation?.recommended_mode ?? null}
+          />
+        ) : null}
         {trips.map((item) => (
           <TripCard key={item.id} trip={item} />
         ))}
