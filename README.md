@@ -23,7 +23,7 @@ Home, Discover, and a guest-or-account welcome sit around those pieces. Guests u
 Three processes.
 
 - **Site** (`frontend/`). Next.js 15, React 19, and Tailwind CSS, in subway blue. Google Maps in the browser handles autocomplete, directions, and the map. The only backend call on NextStop is `POST /api/trips/recommend`, which sends the compared routes to Grok.
-- **API** (`backend/`). FastAPI and Uvicorn, SQLAlchemy, Pydantic. A poller refreshes the live feeds every 30 seconds. Trips and meetings live in SQLite by default, or Postgres on Tiger Cloud. Profiles and preferences are a separate MongoDB: each database stores only an id that points at the other, so names stay out of the trip tables and place details stay out of Mongo.
+- **API** (`backend/`). FastAPI and Uvicorn, SQLAlchemy, Pydantic. A poller refreshes the live feeds every 30 seconds. Trips, meetings, profiles, and preferences live in SQLite by default, or Postgres on Tiger Cloud.
 - **Messages** (`messaging/`). A small Node and TypeScript service on Photon Spectrum. The backend asks it to send the itinerary.
 
 xAI Grok writes the route recommendation. Backboard and ElevenLabs are in the backend for memory and voice, which are the next layer on top of the planner.
@@ -36,7 +36,7 @@ After the merge, the two halves still barely talked. NextStop took transit from 
 
 The map failed for a boring reason that took a while to see: the Google key lived in `backend/.env`, and the map reads `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` from the frontend env. Grok failures were harder. The recommend route caught every error and raised a 502 with the original exception thrown away, so a wrong model name looked like a generic outage.
 
-Photon had its own order of operations. The iMessage agent could only start after the project, plan, and line were configured. Mongo had to stay optional, because guests and most local setups have no connection string, and a missing database cannot take the API down with it.
+Photon had its own order of operations. The iMessage agent could only start after the project, plan, and line were configured. Guests and most local setups have no hosted database, and a missing connection cannot take the API down with it.
 
 ## Accomplishments that we're proud of
 
@@ -46,7 +46,7 @@ Place text survives the messy cases. Station names win when they should, NYC add
 
 Ock and NextStop exist as a product, not a diagram: an MTA-inspired UI, arrive-by comparison across three modes, a Grok recommendation with explicit tradeoffs, and a saved itinerary that actually goes out as an iMessage.
 
-The data split held. City records and people records do not copy each other. The app still boots on SQLite when Tiger Cloud and Mongo are absent.
+The app still boots on SQLite when Tiger Cloud is absent.
 
 ## What we learned
 
@@ -54,7 +54,7 @@ The shape of the trip is the product. Leave time, the time breakdown, and one pl
 
 A key in the wrong env file is the same as no key. A swallowed exception is worse than a crash, because the demo fails and the cause is gone. We now let the original error through on the Grok path.
 
-Split the work by what the data describes. Transit state belongs with the timetable. Profiles belong somewhere else, linked by id. Guests have to keep working when that second database is missing.
+Split the work by what the data describes. Transit state belongs with the timetable. Guests have to keep working when a hosted database is missing.
 
 And merge early. Two branches that each look finished still leave you with a UI on mock data and an engine with no caller.
 
@@ -62,7 +62,7 @@ And merge early. Two branches that each look finished still leave you with a UI 
 
 - Point NextStop's transit option at `POST /api/trips`, so the live MTA plan is the ride, with Google kept for driving and walking.
 - Replace Ock's mock with `POST /api/assistant/chat` that returns the same place cards and itineraries, and store those conversations for signed-in users through Backboard.
-- Mount accounts for real, back the profile and "Ock knows" with Mongo, and add the `/meet` page the share codes already point at.
+- Mount accounts for real, back the profile and "Ock knows", and add the `/meet` page the share codes already point at.
 - Fill Discover from real places, and connect the weather lookup that currently always comes back empty.
 - Turn on voice with ElevenLabs, and an active-trip view that follows live trains and alerts after you leave.
 
