@@ -9,7 +9,6 @@ import { Wordmark } from "@/components/ui/Wordmark";
 const links = [
   { href: "/assistant", label: "Ock" },
   { href: "/navigate", label: "NextStop" },
-  { href: "/profile", label: "Profile" },
 ];
 
 export function Navbar() {
@@ -20,7 +19,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-t-[3px] border-t-[#151719] border-b border-b-[#e4e5e2] bg-[#faf9f6]">
-      <div className="mx-auto flex max-w-[1248px] flex-wrap items-center justify-between gap-x-6 px-5 pt-4 sm:px-8 md:h-[82px] md:flex-nowrap md:py-0">
+      <div className="mx-auto flex max-w-[1248px] flex-wrap items-center justify-between gap-x-3 px-5 pt-4 sm:px-8 md:h-[82px] md:flex-nowrap md:gap-x-6 md:py-0">
         <Link href="/home" prefetch={false} aria-label="ChatNYC home" className="flex items-center gap-2.5 rounded-sm">
           <span className="flex size-9 items-center justify-center rounded-[10px] bg-[#0039a6] text-white">
             <svg viewBox="0 0 26.2 20.4" width={27} height={21} aria-hidden="true">
@@ -41,11 +40,16 @@ export function Navbar() {
           })}
         </nav>
 
-        <div className="flex items-center gap-3 text-[11px] font-semibold tracking-[0.03em] text-[#60656b]">
-          {userMode === "guest" && <span className="rounded-full border border-[#d8dce1] bg-white px-2.5 py-1 text-[9px] font-bold tracking-[0.1em] text-[#50585e]">GUEST</span>}
-          <Icon name="pin" size={14} className="text-[#0039a6]" />
-          <span className="hidden min-[380px]:inline">NEW YORK CITY</span>
-          <span className="min-[380px]:hidden">NYC</span>
+        <div className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.03em] text-[#60656b] sm:gap-3">
+          {userMode === "guest" && (
+            <Link href="/?mode=signup" prefetch={false} className="whitespace-nowrap text-[10px] font-semibold text-[#0039a6] hover:underline sm:text-[11px]">
+              <span className="hidden min-[640px]:inline">Let Ock remember you</span>
+              <span className="min-[640px]:hidden">Create account</span>
+            </Link>
+          )}
+          <Link href="/profile" prefetch={false} aria-label="Open profile and account settings" title="Profile and account settings" aria-current={pathname === "/profile" ? "page" : undefined} className={`flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors ${pathname === "/profile" ? "border-[#aebfdd] bg-[#edf2fb] text-[#0039a6]" : "border-[#d9dcdf] bg-white text-[#535b61] hover:border-[#0039a6] hover:text-[#0039a6]"}`}>
+            <Icon name="user" size={17} />
+          </Link>
         </div>
       </div>
     </header>

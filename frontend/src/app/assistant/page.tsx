@@ -9,5 +9,5 @@ export default async function AssistantPage({ searchParams }: AssistantPageProps
   const queryParam = params.q;
   const initialQuery = Array.isArray(queryParam) ? queryParam[0] : queryParam;
 
-  return <AssistantWorkspace initialQuery={initialQuery ?? ""} />;
+  return <AssistantWorkspace key={initialQuery ?? ""} initialQuery={initialQuery ?? ""} />;
 }
