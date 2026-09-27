@@ -23,7 +23,7 @@ class RouteMetrics(BaseModel):
 
 class RecommendationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    options: list[RouteMetrics] = Field(min_length=1, max_length=3)
+    options: list[RouteMetrics] = Field(min_length=2, max_length=3)
 
     @model_validator(mode="after")
     def unique_modes(self):

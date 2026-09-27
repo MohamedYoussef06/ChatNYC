@@ -36,7 +36,7 @@ def completion(mode="Walk"):
 
 def test_missing_key_is_explicit(monkeypatch):
     monkeypatch.setattr(settings, "grok_api_key", None)
-    response = client.post("/api/trips/recommend", json={"options": [option()]})
+    response = client.post("/api/trips/recommend", json={"options": [option(), option("Drive")]})
     assert response.status_code == 503
     assert "GROK_API_KEY" in response.json()["detail"]
 
@@ -54,7 +54,7 @@ def test_valid_grok_recommendation_preserves_unknown_cost(monkeypatch):
 
 def test_rejects_unavailable_recommendation(monkeypatch):
     mock_grok(monkeypatch, completion("Transit"))
-    assert client.post("/api/trips/recommend", json={"options": [option()]}).status_code == 502
+    assert client.post("/api/trips/recommend", json={"options": [option(), option("Drive")]}).status_code == 502
 
 
 def test_rejects_late_route_when_on_time_option_exists(monkeypatch):
@@ -64,7 +64,7 @@ def test_rejects_late_route_when_on_time_option_exists(monkeypatch):
 
 def test_bad_provider_json_and_auth_failure_are_safe(monkeypatch):
     mock_grok(monkeypatch, {"error": "private provider details"}, status=401)
-    response = client.post("/api/trips/recommend", json={"options": [option()]})
+    response = client.post("/api/trips/recommend", json={"options": [option(), option("Drive")]})
     assert response.status_code == 502
     assert "private provider details" not in response.text
 
@@ -73,4 +73,19 @@ def test_rejects_duplicate_modes_and_negative_duration():
     assert client.post("/api/trips/recommend", json={"options": [option(), option()]}).status_code == 422
     invalid = option()
     invalid["durationMinutes"] = -1
-    assert client.post("/api/trips/recommend", json={"options": [invalid]}).status_code == 422
+    assert client.post("/api/trips/recommend", json={"options": [invalid, option("Drive")]}).status_code == 422
+
+
+def test_requires_two_options_without_calling_grok(monkeypatch):
+    requests = mock_grok(monkeypatch, completion())
+    for options in ([], [option()]):
+        assert client.post("/api/trips/recommend", json={"options": options}).status_code == 422
+    assert requests == []
+
+
+def test_compares_all_three_options(monkeypatch):
+    requests = mock_grok(monkeypatch, completion("Transit"))
+    response = client.post("/api/trips/recommend", json={"options": [option(), option("Drive"), option("Transit")]})
+    assert response.status_code == 200
+    assert response.json()["mode"] == "Transit"
+    assert len(json.loads(requests[0]["messages"][1]["content"])["options"]) == 3
