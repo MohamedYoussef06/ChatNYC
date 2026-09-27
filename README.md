@@ -1,6 +1,6 @@
 # nyc-companion
 
-A monorepo for an NYC trip companion: a Next.js app, a FastAPI backend, and an iMessage bridge. This scaffold boots locally with hello-world data. Live Grok, Backboard, ElevenLabs, maps, and NYC Open Data calls stay behind service stubs until API keys and clients are wired in.
+A monorepo for an NYC trip companion: a Next.js app, a FastAPI backend, and an iMessage bridge. Navigate compares walking, driving, and transit; Grok can highlight a recommended mode when `GROK_API_KEY` is set. Other providers (Backboard, ElevenLabs, NYC Open Data) still use stubs until their clients are wired.
 
 ## Layout
 
@@ -35,6 +35,8 @@ Use three terminals. Copy each `.env.example` if you want to override the localh
 
 ```bash
 cd backend
+cp .env.example .env.local
+# Paste GROK_API_KEY=… (and optionally MAPS_API_KEY=…) into .env.local
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -55,4 +57,4 @@ npm run dev
 
 The site is at [http://localhost:3000](http://localhost:3000). The API is at [http://localhost:8000](http://localhost:8000). Messaging checks `GET /health`, then sends one sample line to `POST /api/assistant/chat`.
 
-Per-package variables live in `frontend/.env.local.example`, `backend/.env.example`, and `messaging/.env.example`. See [docs/demo.md](docs/demo.md) for the click-through and [docs/api.md](docs/api.md) for routes.
+Per-package variables live in `frontend/.env.local.example`, `backend/.env.example` / `backend/.env.local`, and `messaging/.env.example`. Paste your xAI key into **`GROK_API_KEY`** in `backend/.env.local`. Optional `MAPS_API_KEY` enables live Google Directions for the three modes. See [docs/demo.md](docs/demo.md) for the click-through and [docs/api.md](docs/api.md) for routes.

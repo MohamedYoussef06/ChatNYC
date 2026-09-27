@@ -4,6 +4,8 @@ Start the API, the site, and the messaging bridge in three terminals. Copy the e
 
 ```bash
 cd backend
+cp .env.example .env.local
+# Optional: paste GROK_API_KEY=… and MAPS_API_KEY=…
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -27,7 +29,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 1. Home links to the four sections.
 2. Discover shows Prospect Park from `GET /api/discover`.
-3. Navigate shows the CityPilot trip and a route line from Atlantic Av-Barclays Ctr to Prospect Park.
+3. Navigate shows walking / driving / transit options for Atlantic Av-Barclays Ctr → Prospect Park. With `GROK_API_KEY` in `backend/.env.local`, Grok highlights a recommended mode.
 4. Assistant connects to `ws://localhost:8000/ws`. Send the draft message and read the CityPilot reply.
 5. Profile shows Alex Rivera in Prospect Heights from `GET /api/users/me`.
 
