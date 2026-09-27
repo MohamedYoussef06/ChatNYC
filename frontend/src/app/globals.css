@@ -64,4 +64,64 @@
   @media (max-width: 639px) {
     .page { padding-right: 20px; padding-left: 20px; }
   }
+
+  /* Only transform/opacity animate on the train, so it stays on the compositor. */
+  .wordmark { position: relative; display: inline-flex; align-items: baseline; }
+  .wordmark-chat { position: relative; }
+  .wordmark-rail {
+    position: absolute;
+    left: -2px;
+    right: 0;
+    bottom: -0.1em;
+    height: 0.4em;
+    overflow: hidden;
+    pointer-events: none;
+    container-type: inline-size;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 78%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 14%, #000 78%, transparent);
+  }
+  .wordmark-rail::before {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #b3bac2 35%, #8f98a1);
+    opacity: 0;
+    animation: wordmark-rail 9s ease-in-out 0.8s infinite;
+  }
+  .wordmark-train {
+    position: absolute;
+    bottom: 1px;
+    left: 0;
+    height: calc(100% - 1px);
+    aspect-ratio: 74 / 14;
+    transform: translateX(-100%);
+    will-change: transform;
+    animation: wordmark-train 9s 0.8s infinite;
+  }
+  .wordmark-nyc {
+    color: #0039a6;
+    background: linear-gradient(100deg, #0039a6 42%, #8db8ff 50%, #0039a6 58%) 100% 0 / 260% 100% no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: wordmark-glow 9s ease-out 0.8s infinite;
+  }
+  @keyframes wordmark-train {
+    0% { transform: translateX(-100%); animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.45); }
+    18%, 100% { transform: translateX(100cqw); }
+  }
+  @keyframes wordmark-rail {
+    0%, 100% { opacity: 0; }
+    3%, 16% { opacity: 1; }
+    24% { opacity: 0; }
+  }
+  @keyframes wordmark-glow {
+    0%, 14% { background-position: 100% 0; }
+    27%, 100% { background-position: 0 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wordmark-rail { display: none; }
+    .wordmark-nyc { animation: none; }
+  }
 }
