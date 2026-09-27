@@ -14,7 +14,7 @@ from app.api.trips import router as trips_router
 from app.api.weather import router as weather_router
 from app.api.wallet import router as wallet_router
 from app.config import cors_origin_list
-from app.db import close_mongo, connect_mongo, init_db, mongo_status
+from app.db import init_db
 from app.feeds.realtime import live_store, updated_at_iso
 from app.feeds.static_gtfs import current_graph, load, load_error
 from app.routing import timetable
@@ -25,7 +25,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
-    await connect_mongo()
     await asyncio.to_thread(load)
     await asyncio.to_thread(timetable.after_load)
     stop = asyncio.Event()
@@ -41,7 +40,6 @@ async def lifespan(_app: FastAPI):
             await poller
         with suppress(asyncio.CancelledError):
             await reloader
-        await close_mongo()
 
 
 app = FastAPI(
@@ -80,5 +78,4 @@ async def health() -> dict:
         "detail": load_error(),
         "timetable_trips": len(table.trips) if table is not None else 0,
         "live_trains": len(snapshot.trips),
-        "mongo": await mongo_status(),
     }

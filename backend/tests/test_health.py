@@ -12,4 +12,4 @@ def test_health() -> None:
     assert body["status"] in {"ok", "degraded"}
     assert isinstance(body["gtfs_loaded"], bool)
     assert isinstance(body["stations"], int)
-    assert "mongo" in body
+    assert "mongo" not in body
