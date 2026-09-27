@@ -11,6 +11,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ChatNYC — Make NYC yours",
   applicationName: "ChatNYC",
+  icons: {
+    icon: { url: "/icon.svg", type: "image/svg+xml" },
+  },
   description: "Discover, navigate, and experience New York with an AI companion that learns what you love.",
 };
 
