@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     xrpl_rpc_url: str = "https://s.altnet.rippletest.net:51234/"
     xrpl_wallet_seed: str = ""
     xrpl_rlusd_issuer: str = ""
+    demo_wallet_initial_balance: str = "50.00"
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_ROOT / ".env"),

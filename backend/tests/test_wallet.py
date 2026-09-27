@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from app.api.wallet import router
 from app.config import settings
 from app.schemas.wallet import WalletSendRequest
-from app.services import xrpl
+from app.services import demo_wallet, xrpl
 
 WALLET_ADDRESS = "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe"
 OTHER_ADDRESS = "rJ9k7fQ4x3Gf4W6w4F4J6v6B6z6g6b6b6"
@@ -89,6 +89,106 @@ def wallet_client():
     app = FastAPI()
     app.include_router(router, prefix="/api")
     return TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def reset_demo_wallet(monkeypatch):
+    monkeypatch.setattr(settings, "demo_wallet_initial_balance", "50.00")
+    demo_wallet.reset_for_tests()
+    yield
+    demo_wallet.reset_for_tests()
+
+
+def mock_ledger_summary(monkeypatch):
+    monkeypatch.setattr(xrpl, "wallet_summary", lambda: {
+        "network": "testnet", "available": True, "configured": True,
+        "address": WALLET_ADDRESS, "balances": {"XRP": "24.182", "RLUSD": "0"},
+        "rlusd_configured": True, "trustline_active": True, "account_active": True,
+        "message": None,
+    })
+
+
+def test_demo_balance_is_returned_separately_from_real_ledger_state(monkeypatch):
+    mock_ledger_summary(monkeypatch)
+    body = wallet_client().get("/api/wallet").json()
+    assert body["demo"] == {
+        "balance": "50.00", "currency": "RLUSD", "label": "Demo RLUSD", "activity": [],
+    }
+    assert body["balances"] == {"XRP": "24.182", "RLUSD": "0"}
+    assert body["network"] == "testnet"
+
+
+def test_demo_send_decreases_balance_and_is_explicitly_simulated(monkeypatch):
+    mock_ledger_summary(monkeypatch)
+    client = wallet_client()
+    response = client.post("/api/wallet/demo/send", json={
+        "amount": "8.00", "recipient": "MTA ticket", "note": "City payment",
+        "idempotency_key": "send-demo-001",
+    })
+    assert response.status_code == 200
+    body = response.json()
+    assert body["balance"] == "42.00"
+    assert body["status"] == "simulated"
+    assert body["mode"] == "demo"
+    assert body["simulated"] is True
+    assert body["transaction_hash"] is None
+    assert body["ledger_index"] is None
+    summary = client.get("/api/wallet").json()
+    assert summary["demo"]["balance"] == "42.00"
+    assert summary["demo"]["activity"][0]["description"] == "City payment"
+
+
+def test_demo_send_idempotency_prevents_duplicate_debit(monkeypatch):
+    mock_ledger_summary(monkeypatch)
+    client = wallet_client()
+    payload = {"amount": "8.00", "recipient": "Museum", "idempotency_key": "same-click-001"}
+    first = client.post("/api/wallet/demo/send", json=payload).json()
+    second = client.post("/api/wallet/demo/send", json=payload).json()
+    assert first == second
+    assert client.get("/api/wallet").json()["demo"]["balance"] == "42.00"
+
+
+@pytest.mark.parametrize("amount", ["0", "-1", "NaN", "Infinity", "1.001"])
+def test_demo_send_rejects_invalid_amount(amount):
+    response = wallet_client().post("/api/wallet/demo/send", json={"amount": amount, "recipient": "Cafe"})
+    assert response.status_code == 422
+
+
+def test_demo_send_rejects_insufficient_balance():
+    response = wallet_client().post("/api/wallet/demo/send", json={"amount": "50.01", "recipient": "Cafe"})
+    assert response.status_code == 422
+    assert "Insufficient Demo RLUSD" in response.json()["detail"]
+
+
+def test_demo_split_calculates_share_and_updates_balance(monkeypatch):
+    mock_ledger_summary(monkeypatch)
+    client = wallet_client()
+    body = client.post("/api/wallet/demo/split", json={
+        "total": "48.00", "participant_count": 3, "expense": "Restaurant",
+        "idempotency_key": "split-demo-001",
+    }).json()
+    assert body["total"] == "48.00"
+    assert body["each"] == "16.00"
+    assert body["balance"] == "34.00"
+    assert body["activity"]["kind"] == "split"
+    assert body["activity"]["simulated"] is True
+    assert body["transaction_hash"] is None
+
+
+def test_demo_split_rejects_a_share_that_rounds_to_zero():
+    response = wallet_client().post("/api/wallet/demo/split", json={
+        "total": "0.01", "participant_count": 3, "expense": "Tiny split",
+    })
+    assert response.status_code == 422
+    assert "at least 0.01" in response.json()["detail"]
+
+
+def test_wallet_responses_never_expose_server_secrets(monkeypatch):
+    mock_ledger_summary(monkeypatch)
+    monkeypatch.setattr(settings, "xrpl_wallet_seed", SEED)
+    body = wallet_client().get("/api/wallet").text
+    assert SEED not in body
+    assert "wallet_seed" not in body.lower()
 
 
 def test_wallet_unconfigured_response_never_contains_seed(monkeypatch):
@@ -260,5 +360,7 @@ def test_wallet_api_does_not_surface_provider_exception_text(monkeypatch):
 
     monkeypatch.setattr(xrpl, "wallet_summary", fail)
     response = wallet_client().get("/api/wallet")
-    assert response.status_code == 503
+    assert response.status_code == 200
+    assert response.json()["available"] is False
+    assert response.json()["demo"]["balance"] == "50.00"
     assert "private request details" not in response.text

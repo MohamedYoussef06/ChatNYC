@@ -4,6 +4,28 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 
+class DemoActivity(BaseModel):
+    id: str
+    kind: Literal["send", "split"]
+    mode: Literal["demo"] = "demo"
+    simulated: Literal[True] = True
+    asset: Literal["RLUSD"] = "RLUSD"
+    amount: str
+    direction: Literal["sent"] = "sent"
+    counterparty: str
+    description: str
+    timestamp: str
+    transaction_hash: None = None
+    ledger_index: None = None
+
+
+class DemoWalletState(BaseModel):
+    balance: str
+    currency: Literal["RLUSD"] = "RLUSD"
+    label: Literal["Demo RLUSD"] = "Demo RLUSD"
+    activity: list[DemoActivity]
+
+
 class WalletSummary(BaseModel):
     network: Literal["testnet"] = "testnet"
     available: bool
@@ -14,6 +36,53 @@ class WalletSummary(BaseModel):
     trustline_active: bool
     account_active: bool | None = None
     message: str | None = None
+    demo: DemoWalletState
+
+
+class DemoPaymentRequest(BaseModel):
+    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    recipient: str = Field(min_length=1, max_length=80)
+    note: str | None = Field(default=None, max_length=160)
+    idempotency_key: str | None = Field(default=None, min_length=8, max_length=80)
+
+    @field_validator("recipient")
+    @classmethod
+    def validate_recipient(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Recipient is required")
+        return value.strip()
+
+
+class DemoSplitRequest(BaseModel):
+    total: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    participant_count: int = Field(ge=2, le=20)
+    expense: str = Field(min_length=1, max_length=80)
+    idempotency_key: str | None = Field(default=None, min_length=8, max_length=80)
+
+    @field_validator("expense")
+    @classmethod
+    def validate_expense(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Expense is required")
+        return value.strip()
+
+
+class DemoPaymentResult(BaseModel):
+    status: Literal["simulated"] = "simulated"
+    mode: Literal["demo"] = "demo"
+    simulated: Literal[True] = True
+    asset: Literal["RLUSD"] = "RLUSD"
+    amount: str
+    balance: str
+    activity: DemoActivity
+    transaction_hash: None = None
+    ledger_index: None = None
+
+
+class DemoSplitResult(DemoPaymentResult):
+    total: str
+    participant_count: int
+    each: str
 
 
 class WalletSendRequest(BaseModel):
@@ -60,6 +129,8 @@ class WalletTransaction(BaseModel):
     status: Literal["confirmed", "pending"]
     timestamp: str | None = None
     ledger_index: int | None = None
+    mode: Literal["xrpl"] = "xrpl"
+    simulated: Literal[False] = False
 
 
 class WalletTransactions(BaseModel):

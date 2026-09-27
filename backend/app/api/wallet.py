@@ -4,7 +4,12 @@ from typing import Literal
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 
+from app.config import settings
 from app.schemas.wallet import (
+    DemoPaymentRequest,
+    DemoPaymentResult,
+    DemoSplitRequest,
+    DemoSplitResult,
     WalletFxEstimate,
     WalletSendRequest,
     WalletSendResult,
@@ -13,7 +18,7 @@ from app.schemas.wallet import (
     WalletSwapQuoteRequest,
     WalletTransactions,
 )
-from app.services import xrpl
+from app.services import demo_wallet, xrpl
 
 router = APIRouter()
 FX_ENDPOINT = "https://open.er-api.com/v6/latest/USD"
@@ -24,11 +29,48 @@ FX_ATTRIBUTION_URL = "https://www.exchangerate-api.com"
 @router.get("/wallet", response_model=WalletSummary)
 def get_wallet() -> dict:
     try:
-        return xrpl.wallet_summary()
+        summary = xrpl.wallet_summary()
     except xrpl.XRPLConfigurationError:
-        raise HTTPException(503, "ChatNYC Wallet is configured for XRPL Testnet only.") from None
+        summary = {
+            "network": "testnet", "available": False, "configured": False, "address": None,
+            "balances": {"XRP": None, "RLUSD": None}, "rlusd_configured": False,
+            "trustline_active": False, "account_active": None,
+            "message": "XRPL Testnet wallet details are not configured.",
+        }
     except xrpl.XRPLProviderError:
-        raise HTTPException(503, "XRPL Testnet is temporarily unavailable. Balances could not be loaded.") from None
+        summary = {
+            "network": "testnet", "available": False, "configured": True, "address": None,
+            "balances": {"XRP": None, "RLUSD": None}, "rlusd_configured": bool(settings.xrpl_rlusd_issuer.strip()),
+            "trustline_active": False, "account_active": None,
+            "message": "XRPL Testnet is temporarily unavailable. Demo payments still work.",
+        }
+    return {**summary, "demo": demo_wallet.state()}
+
+
+@router.post("/wallet/demo/send", response_model=DemoPaymentResult)
+def send_demo_payment(body: DemoPaymentRequest) -> dict:
+    try:
+        return demo_wallet.send(
+            amount=body.amount,
+            recipient=body.recipient,
+            note=body.note,
+            idempotency_key=body.idempotency_key,
+        )
+    except demo_wallet.DemoWalletError as exc:
+        raise HTTPException(422, str(exc)) from None
+
+
+@router.post("/wallet/demo/split", response_model=DemoSplitResult)
+def pay_demo_split(body: DemoSplitRequest) -> dict:
+    try:
+        return demo_wallet.split(
+            total=body.total,
+            participant_count=body.participant_count,
+            expense=body.expense,
+            idempotency_key=body.idempotency_key,
+        )
+    except demo_wallet.DemoWalletError as exc:
+        raise HTTPException(422, str(exc)) from None
 
 
 @router.get("/wallet/transactions", response_model=WalletTransactions)
