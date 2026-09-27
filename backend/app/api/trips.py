@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -13,6 +14,8 @@ from app.routing.geocode import TripPlanningError, resolve_place
 from app.routing.planner import add_summary
 from app.routing.router import ensure_depart_at, plan_trip
 from app.schemas import TripCreate
+from app.schemas.route_recommendation import RecommendationRequest, RouteRecommendation
+from app.services.grok import recommend_route
 
 router = APIRouter()
 
@@ -83,3 +86,15 @@ def list_trips(limit: int = Query(default=20, ge=1, le=100), db: Session = Depen
             }
         )
     return cards
+
+
+@router.post("/trips/recommend", response_model=RouteRecommendation)
+async def recommend_trip(request: RecommendationRequest) -> RouteRecommendation:
+    if not settings.grok_api_key:
+        raise HTTPException(503, "Grok recommendations are not configured. Add GROK_API_KEY to backend/.env and restart the backend.")
+    try:
+        return await recommend_route(request)
+    except httpx.TimeoutException:
+        raise HTTPException(504, "Grok took too long. You can still choose a route manually.") from None
+    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
+        raise HTTPException(502, "Grok could not provide a valid recommendation. Check the backend key, model access, and credits, or choose a route manually.") from None

@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     mta_api_key: str = ""
     google_maps_api_key: str = ""
     backboard_api_key: str = ""
+    grok_api_key: str = ""
+    grok_model: str = "grok-4.7"
     mta_feed_base: str = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/"
     gtfs_static_url: str = "http://web.mta.info/developers/data/nyct/subway/google_transit.zip"
     poll_interval_seconds: int = 30
