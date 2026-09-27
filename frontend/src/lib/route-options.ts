@@ -7,19 +7,14 @@ const MODES = { Walk: "WALKING", Drive: "DRIVING", Transit: "TRANSIT" } as const
 export async function compareRoutes(origin: string | Coordinates, destination: string | Coordinates, deadline: Date): Promise<RouteOption[]> {
   const { Route } = await loadGoogleMapsLibrary("routes");
   const now = new Date();
-  const driveDeparture = new Date(now.getTime() + 60_000);
   return Promise.all((Object.keys(MODES) as RouteMode[]).map(async (mode) => {
     try {
       const request: google.maps.routes.ComputeRoutesRequest = {
         origin, destination, travelMode: MODES[mode], language: "en-US", region: "us",
         fields: ["durationMillis", "distanceMeters", "path", "viewport", "legs", "travelAdvisory", "warnings"],
-<<<<<<< HEAD
-        ...(mode === "Transit" ? { arrivalTime: deadline } : mode === "Drive" ? { departureTime: driveDeparture, routingPreference: "TRAFFIC_AWARE" } : {}),
-=======
         // Let Google use its server time for driving. A client timestamp of
         // "now" can already be in the past when Google receives the request.
         ...(mode === "Transit" ? { arrivalTime: deadline } : mode === "Drive" ? { routingPreference: "TRAFFIC_AWARE" } : {}),
->>>>>>> f481d80 (fixed NextStop)
       };
       const result = await Route.computeRoutes(request);
       let route = result.routes?.[0];

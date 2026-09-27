@@ -8,12 +8,8 @@ import { TripPlanner } from "@/components/citypilot/TripPlanner";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import type { TripLocation } from "@/lib/location-suggestions";
 import { compareRoutes, getRouteRecommendation } from "@/lib/route-options";
-<<<<<<< HEAD
-import { routeErrorMessage, type RouteMode, type RouteOption, type RouteRecommendation } from "@/lib/route-metrics";
 import { getRouteWeather, type RouteWeather, type WeatherPlace } from "@/lib/weather";
-=======
 import { isRouteOptionAvailable, routeErrorMessage, type RouteMode, type RouteOption, type RouteRecommendation } from "@/lib/route-metrics";
->>>>>>> f481d80 (fixed NextStop)
 
 type SidebarView = "planner" | "breakdown";
 type WeatherStatus = "loading" | "ready" | "unavailable";
