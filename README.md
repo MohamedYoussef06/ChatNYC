@@ -33,7 +33,7 @@ Copy `backend/.env.example` to `backend/.env`.
 | `MTA_FEED_BASE` | GTFS-Realtime base URL. The service polls `nyct/gtfs`, `nyct/gtfs-ace`, `nyct/gtfs-bdfm`, `nyct/gtfs-g`, `nyct/gtfs-jz`, `nyct/gtfs-nqrw`, `nyct/gtfs-l`, `nyct/gtfs-si`, and `camsys/all-alerts`. |
 | `GTFS_STATIC_URL` | Subway `google_transit.zip`. |
 | `POLL_INTERVAL_SECONDS` | Live feed poll interval. Default `30`. |
-| `DATABASE_URL` | SQLite URL. Default `sqlite:///./data/trips.db`. |
+| `DATABASE_URL` | SQLite or Postgres URL. Default `sqlite:///./data/trips.db`. Paste the Tiger Cloud service URL (`postgres://...?sslmode=require`) to use the hosted database. |
 | `GEOSEARCH_URL` | NYC Planning Labs GeoSearch. |
 | `TRANSFER_PENALTY_SECONDS` | Walk penalty for a platform change. Default `120`. |
 | `WALK_SPEED_MPS` | Straight-line walk speed for the legs before and after the subway. Default `1.3`. |
@@ -45,7 +45,7 @@ Copy `backend/.env.example` to `backend/.env`.
 | `NOMINATIM_URL` | OpenStreetMap search, used for venues GeoSearch doesn't know (like "Smalls Jazz Club"). Blank turns it off. |
 | `SHARE_URL_BASE` | Base for `share_url` on meetings. Default `http://localhost:3000/meet`. |
 
-The app creates the SQLite tables from `backend/app/models.py` on startup.
+The app creates the tables from `backend/app/models.py` on startup, in SQLite or Tiger Cloud depending on `DATABASE_URL`.
 
 ## Endpoints
 
