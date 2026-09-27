@@ -1,20 +1,14 @@
-import uuid
+from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import DateTime, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.database import Base
+from app.db import Base
 
 
-class Trip(Base):
+class TripRecord(Base):
     __tablename__ = "trips"
 
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    place_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("places.id"), nullable=True)
-    title: Mapped[str] = mapped_column(String(200))
-    origin: Mapped[str] = mapped_column(String(200))
-    destination: Mapped[str] = mapped_column(String(200))
-    summary: Mapped[str] = mapped_column(Text)
-
-    user: Mapped["User"] = relationship(back_populates="trips")
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    payload: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

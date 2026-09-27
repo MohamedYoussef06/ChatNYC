@@ -1,20 +1,13 @@
-import Link from "next/link";
+import { WelcomeAuth } from "@/components/auth/WelcomeAuth";
 
-export default function HomePage() {
-  return (
-    <>
-      <p className="eyebrow">Hello world</p>
-      <h1>Find a place. Ride there. Ask on the way.</h1>
-      <p className="lede">
-        NYC Companion is a starting point for Discover, CityPilot navigation, and a chat assistant
-        backed by the FastAPI service.
-      </p>
-      <div className="actions">
-        <Link href="/discover">Discover</Link>
-        <Link href="/navigate">Navigate</Link>
-        <Link href="/assistant">Assistant</Link>
-        <Link href="/profile">Profile</Link>
-      </div>
-    </>
-  );
+type WelcomePageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function WelcomePage({ searchParams }: WelcomePageProps) {
+  const params = await searchParams;
+  const requestedMode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
+  const initialView = requestedMode === "signup" || requestedMode === "login" ? requestedMode : "welcome";
+
+  return <WelcomeAuth initialView={initialView} />;
 }

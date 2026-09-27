@@ -27,7 +27,7 @@ export function ChatBox({ messages, connected, onSend }: ChatBoxProps) {
     <section className="chat">
       <p className="eyebrow">{connected ? "Connected" : "Connecting"}</p>
       <ul>
-        {messages.length === 0 ? <li>Send a message to CityPilot.</li> : null}
+        {messages.length === 0 ? <li>Send a message to Ock.</li> : null}
         {messages.map((message, index) => (
           <li key={`${index}-${message}`}>{message}</li>
         ))}

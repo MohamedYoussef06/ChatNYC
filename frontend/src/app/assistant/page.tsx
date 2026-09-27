@@ -1,16 +1,13 @@
-"use client";
+import { AssistantWorkspace } from "@/components/assistant/AssistantWorkspace";
 
-import { ChatBox } from "@/components/ChatBox";
-import { useWebSocket } from "@/hooks/useWebSocket";
+type AssistantPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-const wsUrl = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000/ws";
+export default async function AssistantPage({ searchParams }: AssistantPageProps) {
+  const params = await searchParams;
+  const queryParam = params.q;
+  const initialQuery = Array.isArray(queryParam) ? queryParam[0] : queryParam;
 
-export default function AssistantPage() {
-  const { messages, connected, send } = useWebSocket(wsUrl);
-  return (
-    <>
-      <h1>Assistant</h1>
-      <ChatBox messages={messages} connected={connected} onSend={send} />
-    </>
-  );
+  return <AssistantWorkspace key={initialQuery ?? ""} initialQuery={initialQuery ?? ""} />;
 }
