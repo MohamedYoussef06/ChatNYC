@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { summarizeRoute, routeErrorMessage } from "../src/lib/route-metrics.ts";
+import { summarizeRoute, routeErrorMessage, isRouteOptionAvailable } from "../src/lib/route-metrics.ts";
 
 const date = (time) => new Date(`2026-09-27T${time}:00Z`);
 const walk = (minutes) => ({ travelMode: "WALKING", staticDurationMillis: minutes * 60000 });
@@ -48,4 +48,12 @@ test("walking is free and rejects incomplete provider duration", () => {
   assert.equal(result.metrics.walkingMinutes, 20);
   assert.throws(() => summarizeRoute({ distanceMeters: 4 }, "Walk", date("10:00"), date("09:00"), null));
   assert.match(routeErrorMessage(new Error("Routes API is disabled")), /Enable Routes API/);
+});
+
+test("walking routes over 6.7 miles are unavailable", () => {
+  const walkOption = (distanceMeters) => ({ mode: "Walk", metrics: { distanceMeters } });
+  assert.equal(isRouteOptionAvailable(walkOption(6.7 * 1609.344)), true);
+  assert.equal(isRouteOptionAvailable(walkOption(6.7 * 1609.344 + 1)), false);
+  assert.equal(isRouteOptionAvailable({ mode: "Walk", error: "No route" }), false);
+  assert.equal(isRouteOptionAvailable({ mode: "Drive", metrics: { distanceMeters: 20000 } }), true);
 });

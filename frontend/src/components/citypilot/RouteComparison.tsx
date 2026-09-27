@@ -1,4 +1,5 @@
 import { Icon } from "@/components/ui/Icon";
+import { isRouteOptionAvailable } from "@/lib/route-metrics";
 import type { RouteMode, RouteOption, RouteRecommendation } from "@/lib/route-metrics";
 import type { CSSProperties } from "react";
 
@@ -13,20 +14,23 @@ export function RouteComparison({ options, selected, onSelect, recommendation, a
   recommendation: RouteRecommendation | null; aiLoading: boolean; aiError: string;
 }) {
   if (!options.length) return null;
-  const orderedOptions = comparisonOrder.flatMap((mode) => options.filter((option) => option.mode === mode));
+  const orderedOptions = comparisonOrder
+    .flatMap((mode) => options.filter((option) => option.mode === mode))
+    .sort((left, right) => Number(isRouteOptionAvailable(right)) - Number(isRouteOptionAvailable(left)));
   return (
     <section aria-label="Compare travel modes" className="nextstop-results mb-4 space-y-3">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {orderedOptions.map((option, index) => {
           const metrics = option.metrics;
+          const available = isRouteOptionAvailable(option);
           const recommended = recommendation?.mode === option.mode;
           return (
-            <button key={option.mode} type="button" aria-pressed={selected === option.mode} onClick={() => onSelect(option.mode)}
+            <button key={option.mode} type="button" disabled={!available} aria-pressed={selected === option.mode} onClick={() => onSelect(option.mode)}
               style={{ "--nextstop-result-index": index } as CSSProperties}
-              className={`nextstop-result-card rounded-xl border p-3 text-left ${selected === option.mode ? "border-[#0039a6] bg-[#eef3fb] ring-1 ring-[#0039a6]" : "border-[#dfe2e4] bg-white"}`}>
+              className={`nextstop-result-card rounded-xl border p-3 text-left disabled:cursor-not-allowed disabled:opacity-65 ${selected === option.mode ? "border-[#0039a6] bg-[#eef3fb] ring-1 ring-[#0039a6]" : "border-[#dfe2e4] bg-white"}`}>
               <span className="flex items-center gap-2 text-sm font-semibold"><Icon name={icons[option.mode]} size={17} />{cardLabels[option.mode]}</span>
               {recommended && <span className="mt-2 inline-block rounded-full bg-[#dcf2e4] px-2 py-1 text-[10px] font-bold text-[#17663b]">Grok recommended</span>}
-              {metrics ? <>
+              {!available ? <><span className="mt-2 block text-sm font-semibold text-[#b3261e]">Option Not Available</span><span className="mt-1 block text-xs leading-5 text-[#62666b]">{option.mode === "Walk" && metrics ? "Walking distance is more than 6.7 miles." : option.error ?? "Route data unavailable."}</span></> : metrics ? <>
                 <span className="mt-2 block text-xl font-semibold">{minutes(metrics.durationMinutes)}</span>
                 <span className="mt-1 block text-xs">{metrics.cost == null || !metrics.currency ? "Cost unknown" : new Intl.NumberFormat("en-US", { style: "currency", currency: metrics.currency }).format(metrics.cost)}</span>
                 <span className="mt-1 block text-[10px] leading-4 text-[#62666b]">{metrics.costNote}</span>

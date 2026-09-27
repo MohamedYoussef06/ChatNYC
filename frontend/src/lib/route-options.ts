@@ -13,17 +13,27 @@ export async function compareRoutes(origin: string | Coordinates, destination: s
       const request: google.maps.routes.ComputeRoutesRequest = {
         origin, destination, travelMode: MODES[mode], language: "en-US", region: "us",
         fields: ["durationMillis", "distanceMeters", "path", "viewport", "legs", "travelAdvisory", "warnings"],
+<<<<<<< HEAD
         ...(mode === "Transit" ? { arrivalTime: deadline } : mode === "Drive" ? { departureTime: driveDeparture, routingPreference: "TRAFFIC_AWARE" } : {}),
+=======
+        // Let Google use its server time for driving. A client timestamp of
+        // "now" can already be in the past when Google receives the request.
+        ...(mode === "Transit" ? { arrivalTime: deadline } : mode === "Drive" ? { routingPreference: "TRAFFIC_AWARE" } : {}),
+>>>>>>> f481d80 (fixed NextStop)
       };
-      let result = await Route.computeRoutes(request);
+      const result = await Route.computeRoutes(request);
       let route = result.routes?.[0];
       // Refine driving traffic for the estimated departure, rather than assuming
       // present traffic will apply to a later trip. Google has no driving arrive-by option.
       if (mode === "Drive" && route?.durationMillis) {
         const departure = new Date(deadline.getTime() - route.durationMillis);
-        if (departure.getTime() > now.getTime() + 60000) {
-          result = await Route.computeRoutes({ ...request, departureTime: departure });
-          route = result.routes?.[0];
+        if (departure.getTime() > Date.now() + 120_000) {
+          try {
+            const refined = await Route.computeRoutes({ ...request, departureTime: departure });
+            route = refined.routes?.[0] ?? route;
+          } catch {
+            // Keep the current-traffic estimate if future traffic is unavailable.
+          }
         }
       }
       if (!route) return { mode, error: "Google found no route for this mode at the selected time." };

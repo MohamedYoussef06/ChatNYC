@@ -8,8 +8,12 @@ import { TripPlanner } from "@/components/citypilot/TripPlanner";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import type { TripLocation } from "@/lib/location-suggestions";
 import { compareRoutes, getRouteRecommendation } from "@/lib/route-options";
+<<<<<<< HEAD
 import { routeErrorMessage, type RouteMode, type RouteOption, type RouteRecommendation } from "@/lib/route-metrics";
 import { getRouteWeather, type RouteWeather, type WeatherPlace } from "@/lib/weather";
+=======
+import { isRouteOptionAvailable, routeErrorMessage, type RouteMode, type RouteOption, type RouteRecommendation } from "@/lib/route-metrics";
+>>>>>>> f481d80 (fixed NextStop)
 
 type SidebarView = "planner" | "breakdown";
 type WeatherStatus = "loading" | "ready" | "unavailable";
@@ -106,7 +110,7 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
       if (request !== requestRef.current) return;
       setOptions(results);
       setBusy(false);
-      const available = results.filter((option) => option.metrics);
+      const available = results.filter(isRouteOptionAvailable);
       if (!available.length) {
         setError("No route data is available for these locations and arrival time.");
         return;
@@ -114,6 +118,7 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
       const nextMode = available.some((option) => option.mode === travelMode) ? travelMode : available[0].mode;
       setTravelMode(nextMode);
       transitionSidebar("breakdown");
+      if (available.length < 2) return;
       setAiLoading(true);
       const controller = new AbortController();
       aiController.current = controller;
@@ -122,7 +127,9 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
         const result = await getRouteRecommendation(available, controller.signal);
         if (request === requestRef.current) setRecommendation(result);
       } catch (cause) {
-        if (request === requestRef.current) setAiError("AI comparison unavailable.");
+        if (request === requestRef.current) setAiError(controller.signal.aborted
+          ? "Grok took too long. You can still choose a route manually."
+          : cause instanceof Error ? cause.message : "AI comparison unavailable. You can still choose a route manually.");
       } finally {
         window.clearTimeout(timeout);
         if (request === requestRef.current) setAiLoading(false);

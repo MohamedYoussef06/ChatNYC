@@ -38,6 +38,13 @@ export type RouteOption = {
 };
 export type RouteRecommendation = { mode: RouteMode; reason: string; tradeoffs: string[] };
 
+export const MAX_WALKING_DISTANCE_METERS = 6.7 * 1609.344;
+
+export function isRouteOptionAvailable(option: RouteOption) {
+  if (!option.metrics) return false;
+  return option.mode !== "Walk" || option.metrics.distanceMeters <= MAX_WALKING_DISTANCE_METERS;
+}
+
 export function unavailableRouteCost(mode: RouteMode): RouteCost {
   if (mode === "Walk") {
     return {
