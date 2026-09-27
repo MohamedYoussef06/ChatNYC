@@ -1,4 +1,5 @@
 import { apiUrl } from "@/lib/api";
+import { readNextStopAction, type NextStopTrip } from "@/lib/nextstop-handoff";
 
 export type OckTurn = { role: "user" | "assistant"; content: string };
 export type OckConversation = {
@@ -45,7 +46,7 @@ export async function sendOckMessage(input: {
   history: OckTurn[];
   context?: Record<string, unknown>;
   conversationId?: string | null;
-}): Promise<{ reply: string; conversationId: string | null; persistence: "backboard" | "stateless" | null }> {
+}): Promise<{ reply: string; conversationId: string | null; persistence: "backboard" | "stateless" | null; action: { label: string; href: string; trip: NextStopTrip } | null }> {
   const payload = await request("/api/assistant/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -64,6 +65,7 @@ export async function sendOckMessage(input: {
     reply: row.reply,
     conversationId: typeof row.conversation_id === "string" ? row.conversation_id : null,
     persistence: row.persistence === "backboard" || row.persistence === "stateless" ? row.persistence : null,
+    action: readNextStopAction(row),
   };
 }
 

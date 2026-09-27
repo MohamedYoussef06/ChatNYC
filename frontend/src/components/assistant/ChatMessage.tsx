@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -6,6 +7,7 @@ export type ConversationMessage = {
   id: string;
   role: "assistant" | "user";
   content: string;
+  action?: { label: string; href: string };
 };
 
 export function OckThinkingBubble() {
@@ -55,6 +57,7 @@ export function ChatMessage({ message }: { message: ConversationMessage }) {
               >{message.content}</ReactMarkdown>
             </div>
           )}
+          {message.action && <Link href={message.action.href} className="mt-2 inline-flex min-h-8 items-center rounded-md bg-[#0039a6] px-3 text-[11px] font-semibold text-white">{message.action.label}</Link>}
         </div>
       </div>
     </article>

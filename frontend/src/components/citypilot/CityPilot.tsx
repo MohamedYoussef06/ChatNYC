@@ -29,12 +29,33 @@ function routeLocation(location: TripLocation) {
     : location.label.trim();
 }
 
-export function CityPilot({ initialDestination }: { initialDestination: string }) {
-  const [origin, setOrigin] = useState<TripLocation>({ label: "" });
+function splitArrive(value: string): { date: string; time: string } | null {
+  const parsed = new Date(value);
+  if (!value || Number.isNaN(parsed.getTime())) return null;
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return {
+    date: `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`,
+    time: `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`,
+  };
+}
+
+export function CityPilot({
+  initialOrigin = "",
+  initialDestination = "",
+  initialArriveBy = "",
+  initialMode = "Transit",
+}: {
+  initialOrigin?: string;
+  initialDestination?: string;
+  initialArriveBy?: string;
+  initialMode?: RouteMode;
+}) {
+  const handedArrive = splitArrive(initialArriveBy);
+  const [origin, setOrigin] = useState<TripLocation>({ label: initialOrigin });
   const [destination, setDestination] = useState<TripLocation>({ label: initialDestination });
-  const [arriveByDate, setArriveByDate] = useState("");
-  const [arriveByTime, setArriveByTime] = useState("");
-  const [travelMode, setTravelMode] = useState<RouteMode>("Transit");
+  const [arriveByDate, setArriveByDate] = useState(handedArrive?.date ?? "");
+  const [arriveByTime, setArriveByTime] = useState(handedArrive?.time ?? "");
+  const [travelMode, setTravelMode] = useState<RouteMode>(initialMode);
   const [options, setOptions] = useState<RouteOption[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -55,10 +76,12 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
   const userLocation = useUserLocation();
 
   useEffect(() => {
-    const target = new Date(Date.now() + 60 * 60 * 1000);
-    const pad = (value: number) => String(value).padStart(2, "0");
-    setArriveByDate(`${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}`);
-    setArriveByTime(`${pad(target.getHours())}:${pad(target.getMinutes())}`);
+    if (!handedArrive) {
+      const target = new Date(Date.now() + 60 * 60 * 1000);
+      const pad = (value: number) => String(value).padStart(2, "0");
+      setArriveByDate(`${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}`);
+      setArriveByTime(`${pad(target.getHours())}:${pad(target.getMinutes())}`);
+    }
     return () => {
       requestRef.current += 1;
       aiController.current?.abort();

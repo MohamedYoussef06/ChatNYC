@@ -33,6 +33,7 @@ async def chat(body: ChatRequest, db: Session = Depends(get_db)) -> ChatResponse
             reply=result.reply,
             conversation_id=result.conversation_id,
             persistence=result.persistence,
+            actions=result.actions,
         )
     except backboard.ConversationNotFound:
         raise HTTPException(404, "Ock conversation not found.") from None

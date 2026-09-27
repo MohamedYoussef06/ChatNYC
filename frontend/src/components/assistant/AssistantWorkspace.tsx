@@ -46,7 +46,7 @@ export function AssistantWorkspace({ initialQuery = "" }: { initialQuery?: strin
     try {
       const result = await sendOckMessage({ message, history, context, conversationId });
       if (request === requestRef.current) {
-        setMessages((current) => [...current, { id: `ock-${Date.now()}`, role: "assistant", content: result.reply }]);
+        setMessages((current) => [...current, { id: `ock-${Date.now()}`, role: "assistant", content: result.reply, ...(result.action ? { action: { label: result.action.label, href: result.action.href } } : {}) }]);
         if (result.conversationId) setConversationId(result.conversationId);
       }
     } catch {

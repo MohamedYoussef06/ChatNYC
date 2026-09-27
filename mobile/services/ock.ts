@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+import { readNextStopAction, type NextStopTrip } from '@/lib/nextstop-handoff';
 import type { ChatTurn } from '@/types';
 
 export type OckConversation = { id: string; title: string; created_at: string; updated_at: string; preview?: string | null; messages?: ChatTurn[] };
@@ -8,10 +9,10 @@ const guestSessionId = `mobile-${Date.now()}-${Math.random().toString(36).slice(
 
 export function ockSessionId(): string { return guestSessionId; }
 
-export async function sendOckMessage(message: string, history: ChatTurn[], context?: Record<string, unknown>, conversationId?: string | null): Promise<{ reply: string; conversationId: string | null; persistence: 'backboard' | 'stateless' | null }> {
-  const result = await api<{ reply: string; conversation_id?: string; persistence?: 'backboard' | 'stateless' }>('/api/assistant/chat', { method: 'POST', body: JSON.stringify({ message, history: history.slice(-10), session_id: guestSessionId, ...(conversationId ? { conversation_id: conversationId } : {}), ...(context ? { context } : {}) }) });
+export async function sendOckMessage(message: string, history: ChatTurn[], context?: Record<string, unknown>, conversationId?: string | null): Promise<{ reply: string; conversationId: string | null; persistence: 'backboard' | 'stateless' | null; action: { label: string; trip: NextStopTrip } | null }> {
+  const result = await api<{ reply: string; conversation_id?: string; persistence?: 'backboard' | 'stateless'; actions?: unknown[] }>('/api/assistant/chat', { method: 'POST', body: JSON.stringify({ message, history: history.slice(-10), session_id: guestSessionId, ...(conversationId ? { conversation_id: conversationId } : {}), ...(context ? { context } : {}) }) });
   if (!result || typeof result.reply !== 'string' || !result.reply.trim()) throw new Error('Ock returned an empty response.');
-  return { reply: result.reply, conversationId: typeof result.conversation_id === 'string' ? result.conversation_id : null, persistence: result.persistence ?? null };
+  return { reply: result.reply, conversationId: typeof result.conversation_id === 'string' ? result.conversation_id : null, persistence: result.persistence ?? null, action: readNextStopAction(result) };
 }
 
 export async function createOckConversation(): Promise<string> {

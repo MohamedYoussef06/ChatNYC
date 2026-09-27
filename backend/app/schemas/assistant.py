@@ -27,10 +27,25 @@ class ChatRequest(BaseModel):
         return value
 
 
+class NextStopTrip(BaseModel):
+    origin: str
+    destination: str
+    date_time: str
+    time_type: Literal["arrive_by", "depart_at"]
+    mode: Literal["transit", "drive", "walk"]
+
+
+class OckAction(BaseModel):
+    type: Literal["open_nextstop"] = "open_nextstop"
+    label: str = "Open in NextStop"
+    trip: NextStopTrip
+
+
 class ChatResponse(BaseModel):
     reply: str
     conversation_id: str | None = None
     persistence: Literal["backboard", "stateless"] | None = None
+    actions: list[OckAction] | None = None
 
 
 class ConversationSummary(BaseModel):

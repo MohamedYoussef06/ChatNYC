@@ -1,7 +1,8 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
-import { useMemo, useRef, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { Button, Card, Copy, Eyebrow, Field, Header, Heading, Notice, Page } from '@/components/ui';
 import { C } from '@/constants/theme';
@@ -13,19 +14,30 @@ type Itinerary = { origin?: { label?: string; lat?: number; lon?: number }; dest
 function tripPoint(point: TripLocation) { return { label: point.label, ...(point.latitude !== undefined && point.longitude !== undefined ? { lat: point.latitude, lon: point.longitude } : { query: point.label }) }; }
 function clock(value?: string) { if (!value) return '—'; const date = new Date(value); return Number.isNaN(date.getTime()) ? '—' : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
 
+function one(value?: string | string[]) { return Array.isArray(value) ? value[0] : value; }
+
 export default function NextStopScreen() {
+  const params = useLocalSearchParams<{ origin?: string | string[]; destination?: string | string[]; arrive?: string | string[]; mode?: string | string[] }>();
+  const handedMode = one(params.mode);
   const [from, setFrom] = useState<TripLocation>({ label: '' }); const [to, setTo] = useState<TripLocation>({ label: '' });
   const [deadline, setDeadline] = useState(() => new Date(Date.now() + 90 * 60 * 1000)); const [picker, setPicker] = useState<'date' | 'time' | 'datetime' | null>(null);
   const [searchFor, setSearchFor] = useState<'from' | 'to' | null>(null); const [suggestions, setSuggestions] = useState<PlaceResult[]>([]); const [searchBusy, setSearchBusy] = useState(false); const [locBusy, setLocBusy] = useState(false); const searchRequest = useRef(0);
   const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const [plan, setPlan] = useState<Itinerary | null>(null);
   const mapPoints = { origin: { latitude: plan?.origin?.lat ?? from.latitude, longitude: plan?.origin?.lon ?? from.longitude }, destination: { latitude: plan?.destination?.lat ?? to.latitude, longitude: plan?.destination?.lon ?? to.longitude } };
   const selected = useMemo(() => { const a = mapPoints.origin; const b = mapPoints.destination; if (a.latitude != null && a.longitude != null && b.latitude != null && b.longitude != null) return { latitude: (a.latitude + b.latitude) / 2, longitude: (a.longitude + b.longitude) / 2, latitudeDelta: Math.max(Math.abs(a.latitude - b.latitude) * 1.6, .03), longitudeDelta: Math.max(Math.abs(a.longitude - b.longitude) * 1.6, .03) }; return { latitude: a.latitude ?? b.latitude ?? 40.742, longitude: a.longitude ?? b.longitude ?? -73.99, latitudeDelta: .08, longitudeDelta: .08 }; }, [mapPoints.destination.latitude, mapPoints.destination.longitude, mapPoints.origin.latitude, mapPoints.origin.longitude]);
+  useEffect(() => {
+    const origin = one(params.origin); const destination = one(params.destination); const arrive = one(params.arrive);
+    if (origin) setFrom({ label: origin });
+    if (destination) setTo({ label: destination });
+    if (arrive) { const date = new Date(arrive); if (!Number.isNaN(date.getTime())) setDeadline(date); }
+  }, [params.origin, params.destination, params.arrive]);
   async function findPlaces(target: 'from' | 'to', value: string) { setSearchFor(target); if (target === 'from') setFrom({ label: value }); else setTo({ label: value }); const request = ++searchRequest.current; if (value.trim().length < 2) { setSuggestions([]); setSearchBusy(false); return; } setSearchBusy(true); try { const results = await searchPlaces(value.trim()); if (request === searchRequest.current) setSuggestions(results); } catch { if (request === searchRequest.current) setSuggestions([]); } finally { if (request === searchRequest.current) setSearchBusy(false); } }
   async function useLocation() { setLocBusy(true); setError(''); try { const permission = await Location.requestForegroundPermissionsAsync(); if (!permission.granted) { setError('Location permission is off. You can enter an origin manually.'); return; } const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }); const place = { label: 'Current location', latitude: position.coords.latitude, longitude: position.coords.longitude }; setFrom(place); setSearchFor(null); } catch { setError('Current location is unavailable. Enter an origin manually.'); } finally { setLocBusy(false); } }
   async function compare() { if (!from.label.trim() || !to.label.trim()) { setError('Add both an origin and destination to plan your trip.'); return; } if (deadline.getTime() <= Date.now()) { setError('Choose an arrival time in the future.'); return; } setLoading(true); setError(''); try { const result = await api<Itinerary>('/api/transit/plan', { method: 'POST', body: JSON.stringify({ origin: tripPoint(from), destination: tripPoint(to), arrive_by: deadline.toISOString() }) }); setPlan(result); } catch (e) { setError(e instanceof Error ? e.message : 'Transit planning is unavailable right now.'); setPlan(null); } finally { setLoading(false); } }
   function selectPlace(place: PlaceResult) { const value = { label: place.name, latitude: place.lat, longitude: place.lon, placeId: place.id }; if (searchFor === 'from') setFrom(value); else setTo(value); setSearchFor(null); setSuggestions([]); }
   function changeDeadline(event: { type: string }, date?: Date) { if (event.type === 'dismissed' || !date) { setPicker(null); return; } if (Platform.OS === 'android' && picker === 'date') { const next = new Date(deadline); next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate()); setDeadline(next); setPicker('time'); return; } if (Platform.OS === 'android' && picker === 'time') { const next = new Date(deadline); next.setHours(date.getHours(), date.getMinutes(), 0, 0); setDeadline(next); setPicker(null); return; } setDeadline(date); setPicker(null); }
   return <Page><Header title="NextStop" /><Eyebrow>PLAN YOUR ARRIVAL</Eyebrow><Heading small>Make the city work for your day.</Heading><Copy>Set where you’re going and when you need to arrive.</Copy>
+    {handedMode === 'drive' || handedMode === 'walk' ? <Notice>This trip is set to {handedMode}. Drive and walk comparison is unavailable in the current mobile API, so NextStop can still plan the subway for these places and time.</Notice> : null}
     {!plan ? <Card><Field label="FROM" value={from.label} onChangeText={(value) => void findPlaces('from', value)} placeholder="Search origin" /><Button title={locBusy ? 'Finding your location…' : 'Use my location'} secondary disabled={locBusy} onPress={() => void useLocation()} /><Field label="TO" value={to.label} onChangeText={(value) => void findPlaces('to', value)} placeholder="Search destination" />
       {(searchFor !== null && suggestions.length > 0) && <View style={{ borderWidth: 1, borderColor: C.line, borderRadius: 12, overflow: 'hidden', backgroundColor: 'white' }}>{suggestions.map((place) => <Pressable key={`${place.type}-${place.id}`} onPress={() => selectPlace(place)} style={{ padding: 13, borderBottomWidth: 1, borderBottomColor: C.line }}><Text style={{ color: C.ink, fontWeight: '700' }}>{place.name}</Text>{place.routes?.length ? <Text style={{ color: C.muted, marginTop: 3 }}>{place.routes.join(' · ')}</Text> : null}</Pressable>)}</View>}
       {searchBusy && <ActivityIndicator color={C.blue} />}
