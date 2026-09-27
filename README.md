@@ -1,8 +1,70 @@
-# DivHacks---Unnamed-Project-MTA-THINGY-
+# ChatNYC
 
-Solo NYC subway trip planner. The FastAPI service in `backend/` plans one rider's trip from MTA schedule and GTFS-Realtime data, then stores a read-only meeting snapshot that someone else can open with a share code.
+## Inspiration
 
-No accounts, live location, or multi-user ETA board in this pass. Subway only.
+A night in New York is three jobs at once: somewhere to go, a train that is actually running, and a plan you can hold onto. You still have to notice that the 2 is delayed, that an extra transfer saves four minutes and costs ten, and that you should have left already.
+
+We wanted one companion for that. Ask "cheap date tonight" or "I have 3 hours in Brooklyn" and get places or a timed itinerary, a leave-by time, and a way to send the plan to someone else. The companion is **Ock**. The ride is **NextStop**. Together they are ChatNYC.
+
+We started smaller than the pitch. One rider, subway only, no accounts. Train times had to be right before Ock could be trusted with the rest of the day.
+
+## What it does
+
+- **Ock** takes a plain-language ask and returns place cards or a timed itinerary, with nearby subway lines. Chips such as "Make it cheaper" and "Less walking" change the current plan. "Get me there" opens NextStop on that stop.
+- **NextStop** compares transit, driving, and walking for an arrive-by time: duration, walking minutes, transfers, cost, and whether you can still make it. Grok picks a mode and names the tradeoffs. The route is drawn on a map.
+- **The subway planner** builds the trip from the MTA's scheduled GTFS and live GTFS-Realtime feeds. It skips lines that are not running, counts waits and transfers, and keeps fewer transfers unless the extra one saves real time. Arrive-by plans leave as late as they can and still arrive with a safety buffer. The plan reads like "Take the 1 to 96 St, then the 2 to Wall St."
+- **Place search** matches station names first, then NYC GeoSearch, then OpenStreetMap, so "Barclays Center" and "Smalls Jazz Club" both resolve.
+- **Sharing.** A planned trip can be saved and texted as an iMessage through Photon Spectrum. A meeting snapshot can also be frozen behind a share code.
+
+Home, Discover, and a guest-or-account welcome sit around those pieces. Guests use the app with nothing stored. An account is how Ock is meant to keep conversations and preferences.
+
+## How we built it
+
+Three processes.
+
+- **Site** (`frontend/`). Next.js 15, React 19, and Tailwind CSS, in subway blue. Google Maps in the browser handles autocomplete, directions, and the map. The only backend call on NextStop is `POST /api/trips/recommend`, which sends the compared routes to Grok.
+- **API** (`backend/`). FastAPI and Uvicorn, SQLAlchemy, Pydantic. A poller refreshes the live feeds every 30 seconds. Trips and meetings live in SQLite by default, or Postgres on Tiger Cloud. Profiles and preferences are a separate MongoDB: each database stores only an id that points at the other, so names stay out of the trip tables and place details stay out of Mongo.
+- **Messages** (`messaging/`). A small Node and TypeScript service on Photon Spectrum. The backend asks it to send the itinerary.
+
+xAI Grok writes the route recommendation. Backboard and ElevenLabs are in the backend for memory and voice, which are the next layer on top of the planner.
+
+## Challenges we ran into
+
+The site and the planner were built on branches that had already diverged. The backend used single files for models, schemas, and the database. The frontend branch expected those as packages. Line endings had also flipped across the whole tree, so every file looked edited. We normalized to LF and moved the backend into packages before the merge could be reviewed.
+
+After the merge, the two halves still barely talked. NextStop took transit from Google in the browser. The live planner — hundreds of stations, tens of thousands of scheduled trips, and the trains the feed was tracking — had no page calling it. Meeting links pointed at `/meet`, and that page was not in the app. Ock's workspace ran on a local mock. Profile called `GET /api/users/me`, and that route was not mounted. Several older routers crashed on import because the schemas they expected had moved.
+
+The map failed for a boring reason that took a while to see: the Google key lived in `backend/.env`, and the map reads `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` from the frontend env. Grok failures were harder. The recommend route caught every error and raised a 502 with the original exception thrown away, so a wrong model name looked like a generic outage.
+
+Photon had its own order of operations. The iMessage agent could only start after the project, plan, and line were configured. Mongo had to stay optional, because guests and most local setups have no connection string, and a missing database cannot take the API down with it.
+
+## Accomplishments that we're proud of
+
+The planner answers with real trains. It loads the subway timetable, polls live positions and alerts, and plans a trip such as Times Square to Barclays on the N, with leave time, a walk / ride / wait / transfer breakdown, and line colors the NextStop screens were already drawn to show.
+
+Place text survives the messy cases. Station names win when they should, NYC addresses fill in the rest, and venues GeoSearch has never heard of fall through to OpenStreetMap.
+
+Ock and NextStop exist as a product, not a diagram: an MTA-inspired UI, arrive-by comparison across three modes, a Grok recommendation with explicit tradeoffs, and a saved itinerary that actually goes out as an iMessage.
+
+The data split held. City records and people records do not copy each other. The app still boots on SQLite when Tiger Cloud and Mongo are absent.
+
+## What we learned
+
+The shape of the trip is the product. Leave time, the time breakdown, and one plain-English sentence are what the screens needed, so the planner's response became the contract between the two teams.
+
+A key in the wrong env file is the same as no key. A swallowed exception is worse than a crash, because the demo fails and the cause is gone. We now let the original error through on the Grok path.
+
+Split the work by what the data describes. Transit state belongs with the timetable. Profiles belong somewhere else, linked by id. Guests have to keep working when that second database is missing.
+
+And merge early. Two branches that each look finished still leave you with a UI on mock data and an engine with no caller.
+
+## What's next for ChatNYC
+
+- Point NextStop's transit option at `POST /api/trips`, so the live MTA plan is the ride, with Google kept for driving and walking.
+- Replace Ock's mock with `POST /api/assistant/chat` that returns the same place cards and itineraries, and store those conversations for signed-in users through Backboard.
+- Mount accounts for real, back the profile and "Ock knows" with Mongo, and add the `/meet` page the share codes already point at.
+- Fill Discover from real places, and connect the weather lookup that currently always comes back empty.
+- Turn on voice with ElevenLabs, and an active-trip view that follows live trains and alerts after you leave.
 
 ## Setup
 

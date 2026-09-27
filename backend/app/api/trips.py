@@ -72,6 +72,37 @@ def save_trip_plan(body: TripPlanCreate, db: Session = Depends(get_db)) -> dict:
     return stored
 
 
+@router.post("/trips/{trip_id}/send")
+async def send_trip(trip_id: str, body: TripSend, db: Session = Depends(get_db)) -> dict:
+    record = db.get(TripRecord, trip_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    text = format_trip_text(json.loads(record.payload))
+    row = TripMessageRecord(
+        id=uuid4().hex,
+        trip_id=trip_id,
+        phone=body.phone,
+        status="failed",
+        body=text,
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    try:
+        result = await send_imessage(body.phone, text)
+    except MessagingError as exc:
+        row.error = exc.message
+        db.add(row)
+        db.commit()
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+    row.status = "sent"
+    row.from_number = result.get("fromNumber")
+    row.message_id = result.get("messageId")
+    db.add(row)
+    db.commit()
+    return {"id": row.id, "status": row.status, "from_number": row.from_number}
+
+
 @router.get("/trips/{trip_id}")
 def get_trip(trip_id: str, db: Session = Depends(get_db)) -> dict:
     record = db.get(TripRecord, trip_id)
