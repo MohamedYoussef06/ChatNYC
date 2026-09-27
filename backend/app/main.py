@@ -9,7 +9,7 @@ from app.api.meetings import router as meetings_router
 from app.api.places import router as places_router
 from app.api.stations import router as stations_router
 from app.api.trips import router as trips_router
-from app.db import init_db
+from app.db import close_mongo, connect_mongo, init_db, mongo_status
 from app.feeds.realtime import live_store, updated_at_iso
 from app.feeds.static_gtfs import current_graph, load, load_error
 from app.routing import timetable
@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+    await connect_mongo()
     await asyncio.to_thread(load)
     await asyncio.to_thread(timetable.after_load)
     stop = asyncio.Event()
@@ -35,6 +36,7 @@ async def lifespan(_app: FastAPI):
             await poller
         with suppress(asyncio.CancelledError):
             await reloader
+        await close_mongo()
 
 
 app = FastAPI(
@@ -56,7 +58,7 @@ app.include_router(places_router, prefix="/api")
 
 
 @app.get("/health")
-def health() -> dict:
+async def health() -> dict:
     graph = current_graph()
     snapshot = live_store.snapshot()
     table = timetable.current()
@@ -69,4 +71,5 @@ def health() -> dict:
         "detail": load_error(),
         "timetable_trips": len(table.trips) if table is not None else 0,
         "live_trains": len(snapshot.trips),
+        "mongo": await mongo_status(),
     }

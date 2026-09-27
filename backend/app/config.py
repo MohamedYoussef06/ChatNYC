@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     gtfs_static_url: str = "http://web.mta.info/developers/data/nyct/subway/google_transit.zip"
     poll_interval_seconds: int = 30
     database_url: str = "sqlite:///./data/trips.db"
+    mongodb_url: str = ""
+    mongodb_db_name: str = "chatnyc"
     geosearch_url: str = "https://geosearch.planninglabs.nyc/v2/search"
     transfer_penalty_seconds: int = 120
     walk_speed_mps: float = 1.3
