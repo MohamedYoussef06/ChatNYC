@@ -1128,6 +1128,25 @@
 }
 
 @layer components {
+  .ock-thinking-dots i {
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: #0039a6;
+    animation: ock-thinking 1.15s ease-in-out infinite;
+  }
+  .ock-thinking-dots i:nth-child(2) { animation-delay: 140ms; }
+  .ock-thinking-dots i:nth-child(3) { animation-delay: 280ms; }
+
+  @keyframes ock-thinking {
+    0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-2px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ock-thinking-dots i { animation: none; opacity: 0.75; }
+  }
+
   .profile-menu {
     transform-origin: top right;
   }

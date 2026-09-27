@@ -114,10 +114,10 @@ export function Navbar() {
                 <Icon name="wallet" size={15} className="shrink-0 text-[#0039a6]" />
               </Link>
 
-              <div role="none" className="border-t border-[#e8eae7] px-4 py-3">
+              <Link href="/profile#memory" prefetch={false} role="menuitem" onClick={() => setProfileOpen(false)} className="profile-menu-row block border-t border-[#e8eae7] px-4 py-3">
                 <span className="block text-xs font-semibold">Ock memory</span>
-                <span className="mt-0.5 block text-[10px] text-[#747b80]">{userMode === "authenticated" ? "Demo only · not saved" : "Sign in to enable"}</span>
-              </div>
+                <span className="mt-0.5 block text-[10px] text-[#747b80]">View what Ock remembers</span>
+              </Link>
 
               <button type="button" role="menuitem" disabled={userLocation.status === "requesting"} onClick={() => {
                 setProfileOpen(false);

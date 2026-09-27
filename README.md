@@ -34,6 +34,8 @@ Copy `backend/.env.example` to `backend/.env`.
 | `GTFS_STATIC_URL` | Subway `google_transit.zip`. |
 | `POLL_INTERVAL_SECONDS` | Live feed poll interval. Default `30`. |
 | `DATABASE_URL` | SQLite or Postgres URL. Default `sqlite:///./data/trips.db`. Paste the Tiger Cloud service URL (`postgres://...?sslmode=require`) to use the hosted database. |
+| `GROK_API_KEY` / `GROK_MODEL` | Server-only xAI credentials/model for Ock and route recommendation. Ock continues to use xAI's Responses API. |
+| `BACKBOARD_API_KEY` | Server-only Backboard credential for Ock conversation history and durable memory. Ock remains usable without it, but history and memory are unavailable. |
 | `GEOSEARCH_URL` | NYC Planning Labs GeoSearch. |
 | `TRANSFER_PENALTY_SECONDS` | Walk penalty for a platform change. Default `120`. |
 | `WALK_SPEED_MPS` | Straight-line walk speed for the legs before and after the subway. Default `1.3`. |
@@ -46,6 +48,8 @@ Copy `backend/.env.example` to `backend/.env`.
 | `SHARE_URL_BASE` | Base for `share_url` on meetings. Default `http://localhost:3000/meet`. |
 
 The app creates the tables from `backend/app/models.py` on startup, in SQLite or Tiger Cloud depending on `DATABASE_URL`.
+
+Ock clients also need a public backend origin: set `NEXT_PUBLIC_API_URL` for the web client and `EXPO_PUBLIC_API_URL` for Expo. These values must contain only the backend URL, never server credentials. On a physical phone, use a reachable development-machine hostname or tunnel rather than `localhost`.
 
 ## Endpoints
 

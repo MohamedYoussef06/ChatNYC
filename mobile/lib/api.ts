@@ -18,5 +18,6 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     try { const body: unknown = await response.json(); if (body && typeof body === 'object' && 'detail' in body && typeof body.detail === 'string') message = body.detail; } catch { /* use safe default */ }
     throw new ApiError(message, response.status);
   }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
