@@ -1,0 +1,12 @@
+backend/.venv
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+**/.next
+frontend
+mobile
+messaging
+.git
+**/.env
+**/*.env
+**/.env.*
