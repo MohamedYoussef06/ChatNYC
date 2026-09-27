@@ -5,13 +5,16 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.config import settings
+from app.core.trip_text import format_trip_text
 from app.db import get_db
-from app.models import TripRecord
+from app.models import TripMessageRecord, TripRecord
 from app.routing.planner import add_summary
-from app.schemas import TripCreate
+from app.schemas import TripCreate, TripPlanCreate, TripSend
 from app.schemas.route_recommendation import RecommendationRequest, RouteRecommendation
 from app.services.grok import GrokUnavailable, is_configured, recommend_route
 from app.services.subway import TripPlanningError, plan_subway_trip
+from app.services.photon import MessagingError, send_imessage
 
 router = APIRouter()
 
@@ -31,6 +34,40 @@ async def create_trip(body: TripCreate, db: Session = Depends(get_db)) -> dict:
         created_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(record)
+    db.commit()
+    return stored
+
+
+@router.post("/trips/plans")
+def save_trip_plan(body: TripPlanCreate, db: Session = Depends(get_db)) -> dict:
+    """Store an Ock or NextStop itinerary so Photon can text the same plan later."""
+    trip_id = uuid4().hex
+    stored = {
+        "id": trip_id,
+        "title": body.title,
+        "origin": {"label": body.origin},
+        "destination": {"label": body.destination},
+        "summary": body.summary or body.title,
+        "leave_at": body.leave_at,
+        "arrive_at": body.arrive_at,
+        "duration_seconds": body.duration_seconds,
+        "source": body.source,
+        "stops": [stop.model_dump() for stop in body.stops or []],
+        "steps": [step.model_dump() for step in body.steps or []],
+        "area": body.area,
+        "time_label": body.time_label,
+        "total": body.total,
+        "budget": body.budget,
+        "mode": body.mode,
+        "live": False,
+    }
+    db.add(
+        TripRecord(
+            id=trip_id,
+            payload=json.dumps(stored),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        )
+    )
     db.commit()
     return stored
 

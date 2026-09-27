@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     nominatim_url: str = "https://nominatim.openstreetmap.org/search"
     share_url_base: str = "http://localhost:3000/meet"
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
+    messaging_url: str = "http://127.0.0.1:8787"
+    messaging_api_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_ROOT / ".env"),

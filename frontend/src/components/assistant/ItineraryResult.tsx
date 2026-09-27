@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TextPlanForm } from "@/components/assistant/TextPlanForm";
 import { Icon } from "@/components/ui/Icon";
 import type { ItineraryStop, OckResultData } from "@/lib/ockMock";
 import type { CSSProperties } from "react";
@@ -22,7 +23,7 @@ function ItineraryStopCard({ stop }: { stop: ItineraryStop }) {
   );
 }
 
-export function ItineraryResult({ itinerary, onPrompt }: { itinerary: Itinerary; onPrompt: (prompt: string) => void }) {
+export function ItineraryResult({ itinerary, onPrompt, tripId, savingPlan = false }: { itinerary: Itinerary; onPrompt: (prompt: string) => void; tripId?: string | null; savingPlan?: boolean }) {
   const firstStop = itinerary.stops[0];
   return (
     <section aria-labelledby="ock-itinerary-heading" className="p-4 sm:p-6 lg:p-7">
@@ -65,6 +66,7 @@ export function ItineraryResult({ itinerary, onPrompt }: { itinerary: Itinerary;
         <button type="button" onClick={() => onPrompt("Make it cheaper")} className="ock-secondary-action inline-flex min-h-10 items-center gap-2 rounded-[8px] border border-[#d8dce0] bg-white px-3.5 text-[10px] font-semibold text-[#343b40]">Modify with Ock <Icon name="sparkles" size={13} /></button>
         {firstStop && <Link href={`/navigate?destination=${encodeURIComponent(firstStop.destination)}`} className="ock-primary-action group inline-flex min-h-10 items-center gap-2 rounded-[8px] bg-[#0039a6] px-4 text-[10px] font-semibold text-white">Start the night <Icon name="arrow-right" size={14} className="ock-action-arrow" /></Link>}
       </div>
+      <TextPlanForm tripId={tripId ?? null} saving={savingPlan} />
     </section>
   );
 }

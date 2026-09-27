@@ -1,11 +1,17 @@
+import asyncio
 import json
+
+import httpx
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.db import SessionLocal
 from app.feeds.static_gtfs import RideEdge, Station, TransitGraph
+from app.models import TripMessageRecord
+from app.services.photon import MessagingError, send_imessage
 from app.main import app
 
 
@@ -263,3 +269,157 @@ def test_cors_ignores_a_wildcard(monkeypatch):
     monkeypatch.setattr(settings, "cors_origins", "*,http://localhost:3000")
     assert "*" not in cors_origin_list()
     assert cors_origin_list() == ["http://localhost:3000"]
+
+
+def _saved_trip(client) -> dict:
+    created = client.post(
+        "/api/trips",
+        json={
+            "origin": {"label": "Start", "lat": 40.75529, "lon": -73.987495},
+            "destination": {"label": "End", "lat": 40.735736, "lon": -73.990568},
+        },
+    )
+    assert created.status_code == 200, created.text
+    return created.json()
+
+
+def test_saved_trip_is_texted_and_logged(client, monkeypatch):
+    trip = _saved_trip(client)
+    outbox = []
+
+    async def fake_send(phone: str, text: str) -> dict:
+        outbox.append((phone, text))
+        return {"status": "sent", "messageId": "msg-1", "fromNumber": "+16282894567"}
+
+    monkeypatch.setattr("app.api.trips.send_imessage", fake_send)
+    response = client.post(f"/api/trips/{trip['id']}/send", json={"phone": "+14155551234"})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "sent"
+    assert body["from_number"] == "+16282894567"
+
+    phone, text = outbox[0]
+    assert phone == "+14155551234"
+    assert text.startswith("Your trip: Start to End")
+    assert "Take the N train from Alpha Sq to Beta Sq" in text
+    assert "Walk to End" in text
+
+    with SessionLocal() as db:
+        row = db.get(TripMessageRecord, body["id"])
+        assert row.trip_id == trip["id"]
+        assert row.status == "sent"
+        assert row.message_id == "msg-1"
+        assert row.body == text
+
+
+def test_trip_send_failures_are_reported_and_logged(client, monkeypatch):
+    trip = _saved_trip(client)
+
+    async def offline(phone: str, text: str) -> dict:
+        raise MessagingError("Messaging service is not reachable.", 503)
+
+    monkeypatch.setattr("app.api.trips.send_imessage", offline)
+    response = client.post(f"/api/trips/{trip['id']}/send", json={"phone": "+14155551234"})
+    assert response.status_code == 503
+    with SessionLocal() as db:
+        rows = db.query(TripMessageRecord).filter(TripMessageRecord.trip_id == trip["id"]).all()
+        assert [(row.status, row.error) for row in rows] == [("failed", "Messaging service is not reachable.")]
+
+    assert client.post(f"/api/trips/{trip['id']}/send", json={"phone": "415-555-1234"}).status_code == 422
+    assert client.post("/api/trips/missing/send", json={"phone": "+14155551234"}).status_code == 404
+
+
+def test_ock_plan_is_saved_and_texted(client, monkeypatch):
+    created = client.post(
+        "/api/trips/plans",
+        json={
+            "title": "Your night",
+            "origin": "Ivan Ramen",
+            "destination": "East River Park",
+            "source": "ock",
+            "area": "Manhattan",
+            "time_label": "Tonight",
+            "total": "~$60",
+            "budget": "$80",
+            "stops": [
+                {"time": "7:00 PM", "category": "DINNER", "name": "Ivan Ramen", "neighborhood": "Lower East Side", "price": "~$35", "note": "Start downtown."},
+                {"time": "10:30 PM", "category": "WALK", "name": "East River Park", "neighborhood": "Lower East Side", "price": "Free"},
+            ],
+        },
+    )
+    assert created.status_code == 200, created.text
+    trip = created.json()
+    assert trip["source"] == "ock"
+    assert trip["origin"]["label"] == "Ivan Ramen"
+
+    outbox = []
+
+    async def fake_send(phone: str, text: str) -> dict:
+        outbox.append((phone, text))
+        return {"status": "sent", "messageId": "msg-ock", "fromNumber": "+16282894567"}
+
+    monkeypatch.setattr("app.api.trips.send_imessage", fake_send)
+    response = client.post(f"/api/trips/{trip['id']}/send", json={"phone": "+14155551234"})
+    assert response.status_code == 200, response.text
+    text = outbox[0][1]
+    assert "Your trip: Your night" in text
+    assert "7:00 PM — DINNER: Ivan Ramen" in text
+    assert "Estimated total: ~$60 / $80" in text
+
+
+def test_citypilot_plan_is_saved_and_texted(client, monkeypatch):
+    created = client.post(
+        "/api/trips/plans",
+        json={
+            "title": "Times Square to Union Square",
+            "origin": "Times Square",
+            "destination": "Union Square",
+            "source": "citypilot",
+            "mode": "Transit",
+            "leave_at": "3:00 PM",
+            "arrive_at": "3:22 PM",
+            "steps": [{"text": "Take the N train from Times Sq-42 St to 14 St-Union Sq"}],
+        },
+    )
+    assert created.status_code == 200, created.text
+    trip = created.json()
+    outbox = []
+
+    async def fake_send(phone: str, text: str) -> dict:
+        outbox.append((phone, text))
+        return {"status": "sent", "fromNumber": "+16282894567"}
+
+    monkeypatch.setattr("app.api.trips.send_imessage", fake_send)
+    response = client.post(f"/api/trips/{trip['id']}/send", json={"phone": "+14155551234"})
+    assert response.status_code == 200, response.text
+    text = outbox[0][1]
+    assert "Transit" in text
+    assert "Leave 3:00 PM, arrive 3:22 PM" in text
+    assert "Take the N train from Times Sq-42 St to 14 St-Union Sq" in text
+
+
+def test_messaging_client_sends_bearer_key_and_surfaces_errors(monkeypatch):
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["auth"] = request.headers.get("authorization")
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(502, json={"detail": "Shared user limit reached"})
+
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        "app.services.photon.httpx.AsyncClient",
+        lambda **kwargs: real_client(transport=httpx.MockTransport(handler), **kwargs),
+    )
+    monkeypatch.setattr("app.services.photon.settings.messaging_url", "http://messaging.test/")
+    monkeypatch.setattr("app.services.photon.settings.messaging_api_key", "local-key")
+    with pytest.raises(MessagingError) as raised:
+        asyncio.run(send_imessage("+14155551234", "hello"))
+    assert raised.value.status_code == 502
+    assert raised.value.message == "Shared user limit reached"
+    assert seen == {
+        "url": "http://messaging.test/messages",
+        "auth": "Bearer local-key",
+        "body": {"phone": "+14155551234", "text": "hello"},
+    }
