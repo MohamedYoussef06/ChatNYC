@@ -121,11 +121,13 @@ test("selection resolves the prediction's session and retains the exact branch a
   let fetched = false;
   const selected = await resolveLocation({ ...candidate("one", 50), prediction: { toPlace: () => ({
     displayName: "Shake Shack", formattedAddress: "215 Murray St, New York, NY 10282",
-    location: { toJSON: () => ({ lat: 40.715, lng: -74.014 }) },
+    // Places API (New) exposes a google.maps.LatLng with lat()/lng() methods.
+    location: { lat: () => 40.715, lng: () => -74.014, toJSON: () => ({ lat: 40.715, lng: -74.014 }) },
     async fetchFields() { fetched = true; },
   }) } });
   assert.equal(fetched, true);
   assert.equal(selected.label, "Shake Shack, 215 Murray St, New York, NY 10282");
-  assert.deepEqual(selected.location, { lat: 40.715, lng: -74.014 });
+  assert.equal(selected.latitude, 40.715);
+  assert.equal(selected.longitude, -74.014);
   assert.equal(distanceBetween(COLUMBIA_LOCATION, COLUMBIA_LOCATION), 0);
 });

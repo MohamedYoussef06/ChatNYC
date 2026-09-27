@@ -188,7 +188,22 @@ export function weatherSummary(weather: RouteWeather | undefined): string | null
 export async function getRouteWeather(query: RouteWeatherQuery, signal?: AbortSignal): Promise<RouteWeather | null> {
   if (signal?.aborted) return null;
   if (query.origin == null || query.destination == null || !query.departureTime || !query.arrivalTime) return null;
-  // The backend weather route is not finalized. Keep the request here, and parse
-  // its JSON with parseRouteWeather, once Mohamed publishes the endpoint.
-  return null;
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/weather/route`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      signal,
+      body: JSON.stringify({
+        origin: query.origin,
+        destination: query.destination,
+        departure_time: query.departureTime,
+        arrival_time: query.arrivalTime,
+      }),
+    });
+    if (!response.ok) return null;
+    return parseRouteWeather(await response.json());
+  } catch {
+    return null;
+  }
 }

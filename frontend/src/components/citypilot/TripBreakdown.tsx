@@ -1,8 +1,12 @@
 import { RouteWeatherSection } from "@/components/citypilot/RouteWeather";
+import type { TransitAlert } from "@/lib/backend";
 import { Icon } from "@/components/ui/Icon";
 import type { TripLocation } from "@/lib/location-suggestions";
 import { unavailableRouteCost, type RouteCostItem, type RouteOption } from "@/lib/route-metrics";
 import type { RouteWeather } from "@/lib/weather";
+import { planSubwayTrip } from "@/lib/api";
+import { useState } from "react";
+import type { TransitEnrichment } from "@/lib/backend";
 
 const modeLabels = { Transit: "Transit", Drive: "Drive", Walk: "Walk" } as const;
 const modeIcons = { Transit: "route", Drive: "arrow-up-right", Walk: "walk" } as const;
@@ -34,14 +38,21 @@ function stepLabel(step: google.maps.routes.RouteLegStep) {
   return step.instructions?.replace(/<[^>]*>/g, "") || "Step details unavailable";
 }
 
-export function TripBreakdown({ option, origin, destination, onEdit, weatherStatus = "unavailable", weather }: {
+export function TripBreakdown({ option, origin, destination, arriveBy, onEdit, weatherStatus = "unavailable", weather, mtaStatus, mtaAlerts = [], transitSegments = [], transitTransferSegments = [], transitEnrichmentStatus }: {
   option: RouteOption;
   origin: TripLocation;
   destination: TripLocation;
+  arriveBy?: string;
   onEdit: () => void;
   weatherStatus?: "loading" | "ready" | "unavailable";
   weather?: RouteWeather;
+  mtaStatus?: "loading" | "ready" | "unavailable";
+  mtaAlerts?: TransitAlert[];
+  transitSegments?: TransitEnrichment["subwaySegments"];
+  transitTransferSegments?: TransitEnrichment["transferSegments"];
+  transitEnrichmentStatus?: "loading" | "ready" | "unavailable";
 }) {
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "unavailable">("idle");
   const metrics = option.metrics;
   const cost = metrics?.costDetails ?? unavailableRouteCost(option.mode);
   const steps = option.route?.legs?.flatMap((leg) => leg.steps) ?? [];
@@ -55,6 +66,29 @@ export function TripBreakdown({ option, origin, destination, onEdit, weatherStat
           <h2 id="trip-breakdown-heading" className="mt-1 flex items-center gap-2 text-xl font-semibold tracking-[-0.035em] text-[#191c1e]"><Icon name={modeIcons[option.mode]} size={18} />{modeLabels[option.mode]}</h2>
         </div>
         <button type="button" onClick={onEdit} className="nextstop-edit-trip min-h-10 rounded-lg border border-[#d9dcd9] px-3 text-xs font-semibold text-[#0039a6]">Edit trip</button>
+      </div>
+
+      <div className="mt-4">
+        {option.mode === "Transit" ? (
+          <>
+            <button type="button" disabled={saveState === "saving" || saveState === "saved"} onClick={async () => {
+              setSaveState("saving");
+              const point = (location: TripLocation) => location.latitude != null && location.longitude != null
+                ? { label: location.label, lat: location.latitude, lon: location.longitude }
+                : { query: location.label };
+              try {
+                const saved = await planSubwayTrip({ origin: point(origin), destination: point(destination), arriveBy });
+                setSaveState(saved ? "saved" : "unavailable");
+              } catch {
+                setSaveState("unavailable");
+              }
+            }} className="min-h-10 rounded-lg border border-[#d9dcd9] px-3 text-xs font-semibold text-[#0039a6] disabled:opacity-60">
+              {saveState === "saving" ? "Saving subway trip…" : saveState === "saved" ? "Subway trip saved" : "Save subway trip"}
+            </button>
+            {saveState === "unavailable" && <p role="status" className="mt-2 text-xs text-[#747b80]">The subway trip could not be saved. Your Google route is still available.</p>}
+            {saveState === "saved" && <p role="status" className="mt-2 text-xs text-[#747b80]">Saved using the current MTA subway planner.</p>}
+          </>
+        ) : <p className="text-[10px] leading-4 text-[#747b80]">Saving is currently available for subway itineraries only.</p>}
       </div>
 
       <dl className="mt-5 space-y-3 text-xs">
@@ -72,6 +106,29 @@ export function TripBreakdown({ option, origin, destination, onEdit, weatherStat
       </dl>
 
       <RouteWeatherSection mode={option.mode} status={weatherStatus} weather={weather ?? option.weather} />
+
+      {option.mode === "Transit" && mtaStatus && (
+        <section aria-labelledby="subway-alerts-heading" className="mt-5">
+          <h3 id="subway-alerts-heading" className="text-sm font-semibold">Subway alerts</h3>
+          {mtaStatus === "loading" && <p className="mt-2 text-xs leading-5 text-[#747b80]">Checking live subway alerts…</p>}
+          {mtaStatus === "unavailable" && <p className="mt-2 text-xs leading-5 text-[#747b80]">Live subway alerts are unavailable.</p>}
+          {mtaStatus === "ready" && mtaAlerts.length === 0 && <p className="mt-2 text-xs leading-5 text-[#747b80]">No subway alerts for these lines.</p>}
+          {mtaStatus === "ready" && mtaAlerts.length > 0 && (
+            <ul className="mt-2 space-y-2 text-xs leading-5 text-[#8a4b00]">
+              {mtaAlerts.map((alert) => <li key={`${alert.routes.join(",")}:${alert.header}`}>{alert.routes.join(", ")}: {alert.header}</li>)}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {option.mode === "Transit" && transitEnrichmentStatus && (
+        <section aria-labelledby="mta-detail-heading" className="mt-5">
+          <h3 id="mta-detail-heading" className="text-sm font-semibold">MTA subway details</h3>
+          {transitEnrichmentStatus === "loading" && <p className="mt-2 text-xs leading-5 text-[#747b80]">Checking the MTA timetable and live feed…</p>}
+          {transitEnrichmentStatus === "unavailable" && <p className="mt-2 text-xs leading-5 text-[#747b80]">Station-level MTA details could not be matched to this Google route.</p>}
+          {transitEnrichmentStatus === "ready" && transitSegments.length > 0 && <ol className="mt-3 space-y-2 text-xs leading-5 text-[#4f565b]">{transitSegments.map((segment, index) => <li key={`${segment.route}-${segment.from}-${index}`} className="rounded-lg bg-[#f5f6f3] px-3 py-2"><span className="font-semibold">{segment.route}</span> · {segment.from} → {segment.to}<span className="block text-[10px] text-[#747b80]">{segment.live ? "Live MTA arrival" : "Scheduled MTA time"}: {formatTime(new Date(segment.departure))} – {formatTime(new Date(segment.arrival))}{segment.headsign ? ` · ${segment.headsign}` : ""}</span></li>)}{transitTransferSegments.map((transfer, index) => <li key={`transfer-${index}`} className="rounded-lg border border-dashed border-[#d9dcd9] px-3 py-2 text-[10px] text-[#62696e]">Transfer · {transfer.from} → {transfer.to}</li>)}</ol>}
+        </section>
+      )}
 
       <section aria-labelledby="route-steps-heading" className="mt-5">
         <h3 id="route-steps-heading" className="text-sm font-semibold">Route</h3>

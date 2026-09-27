@@ -76,6 +76,23 @@ def test_plan_persists_and_can_be_shared(client):
     assert snapshot["alerts"] == []
 
 
+def test_read_only_transit_plan_does_not_save(client):
+    before = client.get("/api/trips").json()
+    planned = client.post(
+        "/api/transit/plan",
+        json={
+            "origin": {"label": "Start", "lat": 40.75529, "lon": -73.987495},
+            "destination": {"label": "End", "lat": 40.735736, "lon": -73.990568},
+        },
+    )
+    assert planned.status_code == 200, planned.text
+    body = planned.json()
+    assert "id" not in body
+    assert body["routes"] == ["N"]
+    assert body["mta_enrichment"]["subway_segments"][0]["route"] == "N"
+    assert client.get("/api/trips").json() == before
+
+
 def test_share_code_collision_retries(client, monkeypatch):
     created = client.post(
         "/api/trips",
@@ -176,3 +193,73 @@ def test_rejects_a_point_outside_nyc_and_unknown_records(client):
     assert client.get("/api/trips/missing").status_code == 404
     assert client.post("/api/meetings", json={"trip_id": "missing", "place_name": "Here"}).status_code == 404
     assert client.get("/api/meetings/missing").status_code == 404
+
+
+def test_transit_alerts_match_only_requested_subway_routes(client):
+    from app.feeds.realtime import AlertNotice, LiveSnapshot, live_store
+
+    previous = live_store.snapshot()
+    live_store._snapshot = LiveSnapshot()
+    stale = client.get("/api/transit/alerts", params={"routes": "N"})
+    assert stale.status_code == 200
+    assert stale.json()["fresh"] is False
+    assert stale.json()["alerts"] == []
+    live_store.publish({}, (AlertNotice("N delays", ("N",)), AlertNotice("A change", ("A",))))
+    try:
+        matched = client.get("/api/transit/alerts", params={"routes": "N,A"})
+        assert matched.status_code == 200
+        assert matched.json()["fresh"] is True
+        assert matched.json()["alerts"] == [{"header": "N delays", "routes": ["N"]}]
+    finally:
+        live_store._snapshot = previous
+
+
+def test_weather_route_is_optional_and_returns_normalized_empty_when_unconfigured(client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "google_maps_api_key", "")
+    response = client.post("/api/weather/route", json={
+        "origin": {"latitude": 40.8, "longitude": -73.9},
+        "destination": {"latitude": 40.7, "longitude": -73.99},
+        "departure_time": "2026-09-27T12:00:00Z",
+        "arrival_time": "2026-09-27T13:00:00Z",
+    })
+    assert response.status_code == 200
+    assert response.json() == {"departure": None, "arrival": None, "midpoint": None}
+
+
+def test_assistant_route_uses_shared_grok_completion_and_context(client, monkeypatch):
+    from app.api import assistant
+
+    async def fake_complete(messages, **kwargs):
+        assert messages[-1]["content"].startswith("Hi Ock")
+        assert '"destinationLabel": "Grand Central"' in messages[-1]["content"]
+        assert any(message["content"] == "Prior user context" for message in messages)
+        return "I can help compare your route options."
+
+    monkeypatch.setattr(assistant, "is_configured", lambda: True)
+    monkeypatch.setattr(assistant, "complete", fake_complete)
+    response = client.post("/api/assistant/chat", json={
+        "message": "Hi Ock, what is my trip?",
+        "history": [{"role": "assistant", "content": "Prior user context"}],
+        "context": {"trip": {"destinationLabel": "Grand Central"}},
+    })
+    assert response.status_code == 200, response.text
+    assert response.json() == {"reply": "I can help compare your route options."}
+
+
+def test_assistant_reports_unavailable_without_grok_key(client, monkeypatch):
+    from app.api import assistant
+
+    monkeypatch.setattr(assistant, "is_configured", lambda: False)
+    response = client.post("/api/assistant/chat", json={"message": "Hello"})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Ock is temporarily unavailable."
+
+
+def test_cors_ignores_a_wildcard(monkeypatch):
+    from app.config import cors_origin_list, settings
+
+    monkeypatch.setattr(settings, "cors_origins", "*,http://localhost:3000")
+    assert "*" not in cors_origin_list()
+    assert cors_origin_list() == ["http://localhost:3000"]

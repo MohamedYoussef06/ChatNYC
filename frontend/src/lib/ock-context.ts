@@ -23,3 +23,25 @@ export type OckTripContext = {
   routes?: OckRouteContext[];
   transitStatus?: { summary: string };
 };
+
+const ACTIVE_TRIP_KEY = "chatnyc:ock-active-trip";
+
+export function storeOckTripContext(context: OckTripContext): void {
+  if (typeof window === "undefined") return;
+  try { window.sessionStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(context)); } catch { /* Context remains optional when storage is unavailable. */ }
+}
+
+export function clearOckTripContext(): void {
+  if (typeof window === "undefined") return;
+  try { window.sessionStorage.removeItem(ACTIVE_TRIP_KEY); } catch { /* Context remains optional when storage is unavailable. */ }
+}
+
+export function readOckTripContext(): OckTripContext | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const raw = window.sessionStorage.getItem(ACTIVE_TRIP_KEY);
+    if (!raw || raw.length > 12000) return undefined;
+    const parsed: unknown = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as OckTripContext : undefined;
+  } catch { return undefined; }
+}

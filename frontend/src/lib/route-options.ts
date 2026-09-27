@@ -1,3 +1,4 @@
+import { apiUrl } from "@/lib/api";
 import { loadGoogleMapsLibrary } from "@/lib/google-maps";
 import { NYC_BOUNDS, type Coordinates } from "@/lib/location-suggestions";
 import { routeErrorMessage, summarizeRoute, type RouteMetrics, type RouteMode, type RouteOption, type RouteRecommendation } from "@/lib/route-metrics";
@@ -48,7 +49,7 @@ function metricsForRecommendation(metrics: RouteMetrics) {
 }
 
 export async function getRouteRecommendation(options: RouteOption[], signal: AbortSignal): Promise<RouteRecommendation> {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/trips/recommend`, {
+  const response = await fetch(`${apiUrl()}/api/trips/recommend`, {
     method: "POST", headers: { "Content-Type": "application/json" }, signal,
     body: JSON.stringify({ options: options.flatMap((option) => option.metrics ? [metricsForRecommendation(option.metrics)] : []) }),
   });

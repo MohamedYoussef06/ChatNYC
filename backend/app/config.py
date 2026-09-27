@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     arrive_buffer_minutes: int = 5
     nominatim_url: str = "https://nominatim.openstreetmap.org/search"
     share_url_base: str = "http://localhost:3000/meet"
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_ROOT / ".env"),
@@ -57,3 +58,16 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
+_LOCAL_ORIGINS = (
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+)
+
+
+def cors_origin_list() -> list[str]:
+    """Local dev origins by default. A wildcard is ignored so production is not opened to every site."""
+    configured = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip() and origin.strip() != "*"]
+    return configured or list(_LOCAL_ORIGINS)

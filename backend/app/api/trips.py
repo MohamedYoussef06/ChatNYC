@@ -1,21 +1,17 @@
-import asyncio
 import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db import get_db
 from app.models import TripRecord
-from app.routing.geocode import TripPlanningError, resolve_place
 from app.routing.planner import add_summary
-from app.routing.router import ensure_depart_at, plan_trip
 from app.schemas import TripCreate
 from app.schemas.route_recommendation import RecommendationRequest, RouteRecommendation
-from app.services.grok import recommend_route
+from app.services.grok import GrokUnavailable, is_configured, recommend_route
+from app.services.subway import TripPlanningError, plan_subway_trip
 
 router = APIRouter()
 
@@ -23,24 +19,7 @@ router = APIRouter()
 @router.post("/trips")
 async def create_trip(body: TripCreate, db: Session = Depends(get_db)) -> dict:
     try:
-        origin_label, origin_lat, origin_lon = await resolve_place(body.origin)
-        dest_label, dest_lat, dest_lon = await resolve_place(body.destination)
-        buffer_minutes = settings.arrive_buffer_minutes if body.buffer_minutes is None else body.buffer_minutes
-        buffer_seconds = buffer_minutes * 60 if body.arrive_by is not None else 0
-        # cpu heavy, don't block the poller
-        itinerary = await asyncio.to_thread(
-            plan_trip,
-            origin_label,
-            origin_lat,
-            origin_lon,
-            dest_label,
-            dest_lat,
-            dest_lon,
-            ensure_depart_at(body.depart_at),
-            body.arrive_by,
-            buffer_seconds,
-        )
-        itinerary = add_summary(itinerary, body.arrive_by, buffer_seconds)
+        itinerary = await plan_subway_trip(body)
     except TripPlanningError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
@@ -90,11 +69,10 @@ def list_trips(limit: int = Query(default=20, ge=1, le=100), db: Session = Depen
 
 @router.post("/trips/recommend", response_model=RouteRecommendation)
 async def recommend_trip(request: RecommendationRequest) -> RouteRecommendation:
-    if not settings.grok_api_key:
+    if not is_configured():
         raise HTTPException(503, "Grok recommendations are not configured. Add GROK_API_KEY to backend/.env and restart the backend.")
     try:
         return await recommend_route(request)
-    except httpx.TimeoutException:
-        raise HTTPException(504, "Grok took too long. You can still choose a route manually.") from None
-    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
-        raise HTTPException(502, "Grok could not provide a valid recommendation. Check the backend key, model access, and credits, or choose a route manually.") from None
+    except GrokUnavailable as exc:
+        status_code = 504 if "too long" in str(exc).lower() else 502
+        raise HTTPException(status_code, f"{exc} You can still choose a route manually.") from None

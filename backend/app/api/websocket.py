@@ -1,16 +1,9 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+"""Reserved WebSocket boundary.
 
-from app.services.grok import complete
+The MVP assistant uses POST /api/assistant/chat. A realtime socket remains
+deliberately unmounted until its message protocol and lifecycle are defined.
+"""
+
+from fastapi import APIRouter
 
 router = APIRouter()
-
-
-@router.websocket("/ws")
-async def assistant_socket(websocket: WebSocket) -> None:
-    await websocket.accept()
-    try:
-        while True:
-            message = await websocket.receive_text()
-            await websocket.send_text(complete(message))
-    except WebSocketDisconnect:
-        return

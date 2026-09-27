@@ -6,9 +6,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.meetings import router as meetings_router
+from app.api.assistant import router as assistant_router
 from app.api.places import router as places_router
 from app.api.stations import router as stations_router
+from app.api.transit import router as transit_router
 from app.api.trips import router as trips_router
+from app.api.weather import router as weather_router
+from app.config import cors_origin_list
 from app.db import close_mongo, connect_mongo, init_db, mongo_status
 from app.feeds.realtime import live_store, updated_at_iso
 from app.feeds.static_gtfs import current_graph, load, load_error
@@ -46,7 +50,7 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origin_list(),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -54,7 +58,10 @@ app.add_middleware(
 app.include_router(stations_router, prefix="/api")
 app.include_router(trips_router, prefix="/api")
 app.include_router(meetings_router, prefix="/api")
+app.include_router(assistant_router, prefix="/api/assistant")
 app.include_router(places_router, prefix="/api")
+app.include_router(transit_router, prefix="/api")
+app.include_router(weather_router, prefix="/api")
 
 
 @app.get("/health")

@@ -7,12 +7,16 @@ import { TripBreakdown } from "@/components/citypilot/TripBreakdown";
 import { TripPlanner } from "@/components/citypilot/TripPlanner";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import type { TripLocation } from "@/lib/location-suggestions";
+import { getTransitAlerts, planTransitEnrichment } from "@/lib/api";
+import { subwayLineLabels, type TransitAlert, type TransitEnrichment } from "@/lib/backend";
 import { compareRoutes, getRouteRecommendation } from "@/lib/route-options";
 import { getRouteWeather, type RouteWeather, type WeatherPlace } from "@/lib/weather";
 import { isRouteOptionAvailable, routeErrorMessage, type RouteMode, type RouteOption, type RouteRecommendation } from "@/lib/route-metrics";
+import { clearOckTripContext, storeOckTripContext } from "@/lib/ock-context";
 
 type SidebarView = "planner" | "breakdown";
 type WeatherStatus = "loading" | "ready" | "unavailable";
+type MtaStatus = "loading" | "ready" | "unavailable";
 
 function weatherPlace(location: TripLocation): WeatherPlace | undefined {
   if (location.latitude == null || location.longitude == null) return undefined;
@@ -38,11 +42,14 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
   const [weatherState, setWeatherState] = useState<{ mode: RouteMode; status: WeatherStatus; weather?: RouteWeather } | null>(null);
+  const [mtaState, setMtaState] = useState<{ status: MtaStatus; alerts: TransitAlert[] } | null>(null);
+  const [transitEnrichment, setTransitEnrichment] = useState<{ status: MtaStatus; segments: TransitEnrichment["subwaySegments"]; transfers: TransitEnrichment["transferSegments"] } | null>(null);
   const [sidebarView, setSidebarView] = useState<SidebarView>("planner");
   const [sidebarExiting, setSidebarExiting] = useState(false);
   const [hasTransitioned, setHasTransitioned] = useState(false);
   const requestRef = useRef(0);
   const weatherRequest = useRef(0);
+  const mtaRequest = useRef(0);
   const aiController = useRef<AbortController | null>(null);
   const transitionTimer = useRef<number | null>(null);
   const userLocation = useUserLocation();
@@ -72,14 +79,18 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
   }
 
   function invalidate() {
+    clearOckTripContext();
     requestRef.current += 1;
     weatherRequest.current += 1;
+    mtaRequest.current += 1;
     aiController.current?.abort();
     setOptions([]);
     setRecommendation(null);
     setAiLoading(false);
     setAiError("");
     setWeatherState(null);
+    setMtaState(null);
+    setTransitEnrichment(null);
     setError("");
     setBusy(false);
   }
@@ -152,6 +163,18 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
 
   const selected = options.find((option) => option.mode === travelMode) ?? options[0];
   const showingResults = sidebarView === "breakdown" && Boolean(selected);
+  const arriveByForSave = arriveByDate && arriveByTime ? new Date(`${arriveByDate}T${arriveByTime}:00`).toISOString() : undefined;
+  useEffect(() => {
+    if (!options.length) return;
+    const active = options.find((option) => option.mode === travelMode) ?? options[0];
+    storeOckTripContext({
+      time: new Date().toISOString(),
+      trip: { originLabel: origin.label, destinationLabel: destination.label, departure: active.departure?.toISOString(), arrival: active.arrival?.toISOString(), mode: active.mode },
+      routes: options.filter((option) => option.metrics).map((option) => ({ mode: option.mode, departure: option.departure?.toISOString(), arrival: option.arrival?.toISOString(), durationMinutes: option.metrics?.durationMinutes, weather: option.weather })),
+      ...(active.weather ? { weather: active.weather } : {}),
+      ...(mtaState ? { transitStatus: { summary: mtaState.status === "ready" ? mtaState.alerts.map((alert) => `${alert.routes.join(", ")}: ${alert.header}`).join("; ") || "No relevant MTA alerts reported." : "MTA alert data unavailable." } } : {}),
+    });
+  }, [options, travelMode, origin, destination, mtaState]);
   const weatherQuery = showingResults && selected?.departure && selected.arrival ? {
     mode: selected.mode,
     departure: selected.departure,
@@ -191,6 +214,59 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
     return () => { cancelled = true; };
   }, [weatherKey]);
 
+  const transitOption = options.find((option) => option.mode === "Transit");
+  const subwayLines = subwayLineLabels(transitOption?.route?.legs?.flatMap((leg) => leg.steps) ?? []);
+  const mtaKey = subwayLines.join("|");
+
+  useEffect(() => {
+    if (!showingResults || !transitOption || !subwayLines.length) {
+      setTransitEnrichment(null);
+      return;
+    }
+    const controller = new AbortController();
+    let cancelled = false;
+    setTransitEnrichment({ status: "loading", segments: [], transfers: [] });
+    const arriveBy = new Date(`${arriveByDate}T${arriveByTime}:00`);
+    const toPlace = (location: TripLocation) => location.latitude != null && location.longitude != null
+      ? { label: location.label, lat: location.latitude, lon: location.longitude }
+      : { query: location.label };
+    void planTransitEnrichment({ origin: toPlace(origin), destination: toPlace(destination), arriveBy: arriveBy.toISOString() }, controller.signal).then((report) => {
+      if (cancelled) return;
+      const googleSteps = transitOption.route?.legs?.flatMap((leg) => leg.steps ?? []).filter((step) => step.transitDetails?.transitLine?.vehicle?.vehicleType === "SUBWAY") ?? [];
+      const expected = googleSteps.map((step) => ({
+        route: step.transitDetails?.transitLine?.shortName?.trim().toLowerCase() ?? undefined,
+        from: step.transitDetails?.departureStop?.name ?? undefined,
+        to: step.transitDetails?.arrivalStop?.name ?? undefined,
+      }));
+      const normalize = (value: string | undefined) => value?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? "";
+      const matches = Boolean(report?.fresh && report.subwaySegments.length === expected.length && expected.length > 0 && report.subwaySegments.every((segment, index) =>
+        segment.route.toLowerCase() === expected[index].route && normalize(segment.from) === normalize(expected[index].from) && normalize(segment.to) === normalize(expected[index].to),
+      ));
+      setTransitEnrichment(matches ? { status: "ready", segments: report!.subwaySegments, transfers: report!.transferSegments } : { status: "unavailable", segments: [], transfers: [] });
+    }).catch(() => {
+      if (!cancelled) setTransitEnrichment({ status: "unavailable", segments: [], transfers: [] });
+    });
+    return () => { cancelled = true; controller.abort(); };
+  }, [showingResults, mtaKey, travelMode, origin, destination, arriveByDate, arriveByTime]);
+
+  useEffect(() => {
+    if (!mtaKey) {
+      setMtaState(null);
+      return;
+    }
+    const request = ++mtaRequest.current;
+    const controller = new AbortController();
+    setMtaState({ status: "loading", alerts: [] });
+    void getTransitAlerts(mtaKey.split("|"), controller.signal).then((report) => {
+      if (request !== mtaRequest.current) return;
+      setMtaState(report?.fresh ? { status: "ready", alerts: report.alerts } : { status: "unavailable", alerts: [] });
+    }).catch(() => {
+      if (controller.signal.aborted || request !== mtaRequest.current) return;
+      setMtaState({ status: "unavailable", alerts: [] });
+    });
+    return () => controller.abort();
+  }, [mtaKey]);
+
   return (
     <div className="nextstop-workspace relative left-1/2 -mt-12 w-screen max-w-none -translate-x-1/2 px-5 pb-12 sm:px-8 xl:px-12 2xl:px-16">
       <div className="mx-auto max-w-[1600px]">
@@ -208,9 +284,14 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
           <div className={`${showingResults ? "order-2" : "order-1"} nextstop-planner-column min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1`}>
             <div className={`nextstop-sidebar-slot${sidebarExiting ? " is-exiting" : ""}`}>
               {showingResults && selected ? (
-                <TripBreakdown key={selected.mode} option={selected} origin={origin} destination={destination} onEdit={editTrip}
+                <TripBreakdown key={selected.mode} option={selected} origin={origin} destination={destination} arriveBy={arriveByForSave} onEdit={editTrip}
                   weatherStatus={weatherState?.mode === selected.mode ? weatherState.status : "loading"}
-                  weather={weatherState?.mode === selected.mode ? weatherState.weather : undefined} />
+                  weather={weatherState?.mode === selected.mode ? weatherState.weather : undefined}
+                  mtaStatus={selected.mode === "Transit" ? mtaState?.status : undefined}
+                  mtaAlerts={selected.mode === "Transit" ? mtaState?.alerts : undefined}
+                  transitSegments={selected.mode === "Transit" ? transitEnrichment?.segments : undefined}
+                  transitTransferSegments={selected.mode === "Transit" ? transitEnrichment?.transfers : undefined}
+                  transitEnrichmentStatus={selected.mode === "Transit" ? transitEnrichment?.status : undefined} />
               ) : (
                 <TripPlanner origin={origin} destination={destination} arriveByDate={arriveByDate} arriveByTime={arriveByTime} busy={busy}
                   locationStatus={userLocation.status} locationError={userLocation.error} usingCurrentLocation={origin.label === "Current location" && origin.latitude != null}

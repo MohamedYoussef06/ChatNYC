@@ -38,12 +38,26 @@ test("parseRouteWeather drops incomplete points instead of filling them in", () 
   assert.equal("providerPayload" in weather, false);
 });
 
-test("getRouteWeather does not invent a forecast before the backend route exists", async () => {
-  const weather = await getRouteWeather({
+test("getRouteWeather sends route timing to backend and parses normalized weather", async () => {
+  const originalFetch = globalThis.fetch;
+  let sent;
+  globalThis.fetch = async (url, init) => {
+    sent = { url, body: JSON.parse(init.body) };
+    return { ok: true, json: async () => ({ departure, arrival: null, midpoint: null }) };
+  };
+  try {
+    const weather = await getRouteWeather({
     origin: { latitude: 40.758, longitude: -73.9855, label: "Times Square" },
     destination: { latitude: 40.8075, longitude: -73.9626, label: "Columbia University" },
     departureTime: "2026-09-27T11:00:00-04:00",
     arrivalTime: "2026-09-27T12:00:00-04:00",
   });
-  assert.equal(weather, null);
+    assert.equal(sent.url, "http://localhost:8000/api/weather/route");
+    assert.equal(sent.body.departure_time, "2026-09-27T11:00:00-04:00");
+    assert.equal(sent.body.origin.latitude, 40.758);
+    assert.equal(weather.departure.condition.description, "Light rain");
+    assert.equal(weather.arrival, undefined);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
