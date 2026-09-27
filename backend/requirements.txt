@@ -13,3 +13,4 @@ pydo>=0.41
 pymongo>=4.13,<5
 googlemaps>=4.10
 backboard-sdk>=1.5
+xrpl-py>=4.4,<6

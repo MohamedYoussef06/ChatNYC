@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
     messaging_url: str = "http://127.0.0.1:8787"
     messaging_api_key: str = ""
+    xrpl_network: str = "testnet"
+    xrpl_rpc_url: str = "https://s.altnet.rippletest.net:51234/"
+    xrpl_wallet_seed: str = ""
+    xrpl_rlusd_issuer: str = ""
+    demo_wallet_initial_balance: str = "50.00"
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_ROOT / ".env"),

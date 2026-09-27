@@ -12,6 +12,7 @@ from app.api.stations import router as stations_router
 from app.api.transit import router as transit_router
 from app.api.trips import router as trips_router
 from app.api.weather import router as weather_router
+from app.api.wallet import router as wallet_router
 from app.config import cors_origin_list
 from app.db import close_mongo, connect_mongo, init_db, mongo_status
 from app.feeds.realtime import live_store, updated_at_iso
@@ -62,6 +63,7 @@ app.include_router(assistant_router, prefix="/api/assistant")
 app.include_router(places_router, prefix="/api")
 app.include_router(transit_router, prefix="/api")
 app.include_router(weather_router, prefix="/api")
+app.include_router(wallet_router, prefix="/api")
 
 
 @app.get("/health")

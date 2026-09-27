@@ -11,7 +11,7 @@ from app.config import settings
 from app.schemas.route_recommendation import RecommendationRequest, RouteRecommendation
 
 logger = logging.getLogger(__name__)
-GROK_COMPLETIONS_URL = "https://api.x.ai/v1/chat/completions"
+GROK_RESPONSES_URL = "https://api.x.ai/v1/responses"
 
 
 class GrokUnavailable(RuntimeError):
@@ -31,35 +31,69 @@ async def complete(
     response_format: dict[str, Any] | None = None,
     max_tokens: int = 900,
 ) -> str:
-    """Send a bounded chat completion and return only validated nonempty text."""
+    """Send a bounded Responses API request and return assistant output text only."""
     if not is_configured():
         raise GrokUnavailable("Grok is not configured.")
 
     payload: dict[str, Any] = {
         "model": settings.grok_model,
-        "messages": messages,
-        "max_tokens": max_tokens,
+        "input": messages,
+        "max_output_tokens": max_tokens,
     }
     if response_format is not None:
-        payload["response_format"] = response_format
+        if response_format.get("type") == "json_schema":
+            json_schema = response_format.get("json_schema")
+            if not isinstance(json_schema, dict):
+                raise GrokUnavailable("Grok response format is invalid.")
+            payload["text"] = {
+                "format": {
+                    "type": "json_schema",
+                    "name": json_schema.get("name"),
+                    "strict": json_schema.get("strict", True),
+                    "schema": json_schema.get("schema"),
+                }
+            }
+        elif response_format.get("type") == "json_object":
+            payload["text"] = {"format": {"type": "json_object"}}
+        else:
+            raise GrokUnavailable("Grok response format is unsupported.")
 
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=8.0)) as client:
             response = await client.post(
-                GROK_COMPLETIONS_URL,
-                headers={"Authorization": f"Bearer {settings.grok_api_key}"},
+                GROK_RESPONSES_URL,
+                headers={
+                    "Authorization": f"Bearer {settings.grok_api_key}",
+                    "Content-Type": "application/json",
+                },
                 json=payload,
             )
         response.raise_for_status()
         data = response.json()
-        choice = data["choices"][0]
-        message = choice["message"]
-        content = message.get("content")
-        if choice.get("finish_reason") == "length":
+        if data.get("status") == "incomplete":
             raise GrokUnavailable("Grok response was incomplete.")
-        if message.get("refusal"):
-            raise GrokUnavailable("Grok could not answer that request.")
-        if not isinstance(content, str) or not content.strip():
+        if data.get("status") not in (None, "completed"):
+            raise GrokUnavailable("Grok response was incomplete.")
+
+        output = data.get("output")
+        if not isinstance(output, list):
+            raise GrokUnavailable("Grok returned an invalid response.")
+        text_parts: list[str] = []
+        for item in output:
+            if not isinstance(item, dict) or item.get("type") != "message" or item.get("role") != "assistant":
+                continue
+            content_items = item.get("content")
+            if not isinstance(content_items, list):
+                continue
+            for content_item in content_items:
+                if not isinstance(content_item, dict):
+                    continue
+                if content_item.get("type") == "refusal":
+                    raise GrokUnavailable("Grok could not answer that request.")
+                if content_item.get("type") == "output_text" and isinstance(content_item.get("text"), str):
+                    text_parts.append(content_item["text"])
+        content = "".join(text_parts)
+        if not content.strip():
             raise GrokUnavailable("Grok returned an empty response.")
         return content.strip()
     except GrokUnavailable:

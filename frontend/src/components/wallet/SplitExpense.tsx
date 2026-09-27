@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { payDemoSplit } from "@/lib/wallet";
 
 interface Participant {
   id: string;
@@ -16,16 +17,18 @@ interface SplitPreview {
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
-export function SplitExpense() {
-  const [expense, setExpense] = useState("Dinner at Smalls");
-  const [totalInput, setTotalInput] = useState("80.00");
+export function SplitExpense({ onPaid }: { onPaid: () => void }) {
+  const [expense, setExpense] = useState("");
+  const [totalInput, setTotalInput] = useState("");
   const [note, setNote] = useState("");
   const [personName, setPersonName] = useState("");
   const [participants, setParticipants] = useState<Participant[]>([
     { id: "you", name: "You", isYou: true },
-    { id: "akeelah", name: "Akeelah" },
   ]);
   const [preview, setPreview] = useState<SplitPreview | null>(null);
+  const [paying, setPaying] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState("");
+  const [paymentError, setPaymentError] = useState("");
   const nextParticipantId = useRef(1);
   const total = Number.parseFloat(totalInput) || 0;
   const each = participants.length > 0 ? total / participants.length : 0;
@@ -41,14 +44,34 @@ export function SplitExpense() {
 
   function submitSplit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!expense.trim() || total <= 0 || participants.length === 0) return;
+    if (!expense.trim() || total <= 0 || participants.length < 2) return;
     setPreview({ each, people: participants.length });
+    setPaymentMessage("");
+    setPaymentError("");
+  }
+
+  async function payShare() {
+    if (!preview || paying) return;
+    setPaying(true);
+    setPaymentError("");
+    try {
+      const result = await payDemoSplit({
+        total: total.toFixed(2), participantCount: participants.length,
+        expense: expense.trim(), idempotencyKey: crypto.randomUUID(),
+      });
+      setPaymentMessage(`Paid ${result.each} Demo RLUSD. New demo balance: ${result.balance} RLUSD.`);
+      onPaid();
+    } catch (cause) {
+      setPaymentError(cause instanceof Error ? cause.message : "The demo split payment could not be completed.");
+    } finally {
+      setPaying(false);
+    }
   }
 
   return (
     <form onSubmit={submitSplit} className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
       <section className="wallet-panel rounded-[16px] border border-[#dfe2df] bg-white p-6 sm:p-8" style={{ "--wallet-delay": "80ms" } as CSSProperties} aria-labelledby="split-expense-heading">
-        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#0039a6]">Local preview</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#0039a6]">Demo RLUSD</p>
         <h2 id="split-expense-heading" className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Split an expense</h2>
         <p className="mt-2 max-w-xl text-sm leading-6 text-[#666c71]">Split dinner, tickets, rides, or anything else with your group.</p>
 
@@ -82,15 +105,18 @@ export function SplitExpense() {
           <div className="flex justify-between gap-4 py-3"><dt className="text-[#666c71]">People</dt><dd className="font-semibold">{participants.length}</dd></div>
           <div className="flex justify-between gap-4 py-3"><dt className="text-[#666c71]">Each</dt><dd className="font-semibold text-[#0039a6]">{formatted.each}</dd></div>
         </dl>
-        <button type="submit" disabled={!expense.trim() || total <= 0 || participants.length === 0} className="wallet-primary-button mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-[9px] bg-[#0039a6] px-5 text-sm font-semibold text-white disabled:opacity-50">
+        <button type="submit" disabled={!expense.trim() || total <= 0 || participants.length < 2} className="wallet-primary-button mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-[9px] bg-[#0039a6] px-5 text-sm font-semibold text-white disabled:opacity-50">
           Create split <Icon name="arrow-right" size={15} className="wallet-action-arrow" />
         </button>
-        <p className="mt-3 text-[10px] leading-5 text-[#73797e]">Creates a local preview only. No funds will move.</p>
+        <p className="mt-3 text-[10px] leading-5 text-[#73797e]">Add at least one other person. Creating the preview does not move funds.</p>
         {preview && (
           <div role="status" className="wallet-notice mt-5 rounded-[10px] border border-[#bfd0ec] bg-[#edf2fb] p-4">
             <p className="text-sm font-semibold text-[#102859]">Split created</p>
             <p className="mt-1 text-xs leading-5 text-[#4d5f7a]">{money.format(preview.each)} per person for {preview.people} {preview.people === 1 ? "person" : "people"}.</p>
-            <p className="mt-2 text-[10px] leading-4 text-[#66748a]">Payment settlement will become available when the wallet is connected.</p>
+            <p className="mt-2 text-[10px] leading-4 text-[#66748a]">Pay your portion from ChatNYC Demo RLUSD. This is simulated and will not be submitted to XRPL.</p>
+            <button type="button" disabled={paying || Boolean(paymentMessage)} onClick={() => void payShare()} className="wallet-secondary-button mt-4 min-h-10 rounded-[9px] border border-[#c8d3e4] bg-white px-4 text-xs font-semibold text-[#0039a6] disabled:opacity-50">{paying ? "Paying…" : paymentMessage ? "Demo share paid" : `Pay ${preview.each.toFixed(2)} Demo RLUSD`}</button>
+            {paymentMessage && <p className="mt-3 text-xs font-semibold leading-5 text-[#16865b]">{paymentMessage}</p>}
+            {paymentError && <p role="alert" className="mt-3 text-xs leading-5 text-[#b3261e]">{paymentError}</p>}
           </div>
         )}
       </aside>
