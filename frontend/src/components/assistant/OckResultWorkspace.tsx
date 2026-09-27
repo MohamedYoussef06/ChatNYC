@@ -5,11 +5,11 @@ import { PlaceResults } from "@/components/assistant/PlaceResults";
 import { Icon } from "@/components/ui/Icon";
 import type { OckMockResponse } from "@/lib/ockMock";
 
-export function OckResultWorkspace({ response, onPrompt }: { response: OckMockResponse; onPrompt: (prompt: string) => void }) {
+export function OckResultWorkspace({ response, onPrompt, tripId, savingPlan = false }: { response: OckMockResponse; onPrompt: (prompt: string) => void; tripId?: string | null; savingPlan?: boolean }) {
   if (response.data.type === "empty") return <OckEmptyState onPrompt={onPrompt} />;
   if (response.data.type === "places") return <PlaceResults eyebrow={`OCK FOUND ${response.data.places.length}`} title={response.data.title} subtitle={response.data.subtitle} places={response.data.places} onAsk={onPrompt} />;
   if (response.data.type === "activity") return <PlaceResults eyebrow="OCK IDEAS" title={response.data.title} subtitle={response.data.subtitle} places={response.data.places} onAsk={onPrompt} />;
-  if (response.data.type === "itinerary") return <ItineraryResult itinerary={response.data} onPrompt={onPrompt} />;
+  if (response.data.type === "itinerary") return <ItineraryResult itinerary={response.data} onPrompt={onPrompt} tripId={tripId} savingPlan={savingPlan} />;
 
   return (
     <section className="ock-handoff flex min-h-[530px] flex-col items-start justify-center p-5 sm:p-8 lg:p-10" aria-labelledby="ock-handoff-heading">

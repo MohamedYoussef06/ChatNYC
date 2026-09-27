@@ -1,7 +1,8 @@
 import { RouteWeatherSection } from "@/components/citypilot/RouteWeather";
+import { TextPlanForm } from "@/components/assistant/TextPlanForm";
 import { Icon } from "@/components/ui/Icon";
 import type { TripLocation } from "@/lib/location-suggestions";
-import { unavailableRouteCost, type RouteCostItem, type RouteOption } from "@/lib/route-metrics";
+import { routeStepLabel, unavailableRouteCost, type RouteCostItem, type RouteOption } from "@/lib/route-metrics";
 import type { RouteWeather } from "@/lib/weather";
 
 const modeLabels = { Transit: "Transit", Drive: "Drive", Walk: "Walk" } as const;
@@ -24,23 +25,15 @@ function formatCost(item: RouteCostItem) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: item.currency }).format(item.amount);
 }
 
-function stepLabel(step: google.maps.routes.RouteLegStep) {
-  if (step.transitDetails) {
-    const line = step.transitDetails.transitLine?.shortName ?? step.transitDetails.transitLine?.name ?? "Transit";
-    const start = step.transitDetails.departureStop?.name ?? "Boarding stop unavailable";
-    const end = step.transitDetails.arrivalStop?.name ?? "Arrival stop unavailable";
-    return `${line}: ${start} → ${end}`;
-  }
-  return step.instructions?.replace(/<[^>]*>/g, "") || "Step details unavailable";
-}
-
-export function TripBreakdown({ option, origin, destination, onEdit, weatherStatus = "unavailable", weather }: {
+export function TripBreakdown({ option, origin, destination, onEdit, weatherStatus = "unavailable", weather, tripId, savingPlan = false }: {
   option: RouteOption;
   origin: TripLocation;
   destination: TripLocation;
   onEdit: () => void;
   weatherStatus?: "loading" | "ready" | "unavailable";
   weather?: RouteWeather;
+  tripId?: string | null;
+  savingPlan?: boolean;
 }) {
   const metrics = option.metrics;
   const cost = metrics?.costDetails ?? unavailableRouteCost(option.mode);
@@ -75,7 +68,7 @@ export function TripBreakdown({ option, origin, destination, onEdit, weatherStat
 
       <section aria-labelledby="route-steps-heading" className="mt-5">
         <h3 id="route-steps-heading" className="text-sm font-semibold">Route</h3>
-        {steps.length ? <ol className="mt-3 list-decimal space-y-3 pl-5 text-xs leading-5 text-[#4f565b]">{steps.map((step, index) => <li key={index}>{stepLabel(step)}</li>)}</ol> : <p className="mt-2 text-xs text-[#747b80]">Awaiting route data.</p>}
+        {steps.length ? <ol className="mt-3 list-decimal space-y-3 pl-5 text-xs leading-5 text-[#4f565b]">{steps.map((step, index) => <li key={index}>{routeStepLabel(step)}</li>)}</ol> : <p className="mt-2 text-xs text-[#747b80]">Awaiting route data.</p>}
       </section>
 
       <section aria-labelledby="route-cost-heading" className="mt-6 border-t border-[#eceeeb] pt-5">
@@ -89,6 +82,7 @@ export function TripBreakdown({ option, origin, destination, onEdit, weatherStat
 
       {!metrics && <p role="status" className="mt-5 rounded-lg bg-[#f4f5f2] px-3 py-2.5 text-xs leading-5 text-[#62696e]">{option.error ?? "Route information is not available."}</p>}
       {option.route?.warnings?.map((warning, index) => <p key={index} className="mt-3 text-xs leading-5 text-[#8a4b00]">{warning}</p>)}
+      <TextPlanForm tripId={tripId ?? null} saving={savingPlan} variant="nextstop" />
     </section>
   );
 }

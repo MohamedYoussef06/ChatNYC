@@ -129,6 +129,16 @@ export function summarizeRoute(route: google.maps.routes.Route, mode: RouteMode,
   };
 }
 
+export function routeStepLabel(step: google.maps.routes.RouteLegStep): string {
+  if (step.transitDetails) {
+    const line = step.transitDetails.transitLine?.shortName ?? step.transitDetails.transitLine?.name ?? "Transit";
+    const start = step.transitDetails.departureStop?.name ?? "Boarding stop unavailable";
+    const end = step.transitDetails.arrivalStop?.name ?? "Arrival stop unavailable";
+    return `${line}: ${start} → ${end}`;
+  }
+  return step.instructions?.replace(/<[^>]*>/g, "") || "Step details unavailable";
+}
+
 export function routeErrorMessage(error: unknown) {
   const message = error && typeof error === "object" && "message" in error ? String(error.message) : "";
   if (/disabled|not been used|not authorized|permission|denied|API_KEY_SERVICE_BLOCKED/i.test(message)) {

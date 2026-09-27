@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     arrive_buffer_minutes: int = 5
     nominatim_url: str = "https://nominatim.openstreetmap.org/search"
     share_url_base: str = "http://localhost:3000/meet"
+    messaging_url: str = "http://127.0.0.1:8787"
+    messaging_api_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_ROOT / ".env"),

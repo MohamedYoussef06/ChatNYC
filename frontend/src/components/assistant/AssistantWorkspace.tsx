@@ -7,6 +7,8 @@ import { OckResultWorkspace } from "@/components/assistant/OckResultWorkspace";
 import type { ConversationMessage } from "@/components/assistant/ChatMessage";
 import { Icon } from "@/components/ui/Icon";
 import { resolveOckRequest, type OckMockResponse } from "@/lib/ockMock";
+import { normalizePhone } from "@/lib/phone";
+import { itineraryToPlan, saveTripPlan, sendTripPlan } from "@/lib/trips";
 
 function initialMessages(query: string): ConversationMessage[] {
   const text = query.trim();
@@ -23,16 +25,52 @@ export function AssistantWorkspace({ initialQuery = "" }: { initialQuery?: strin
   const [messages, setMessages] = useState<ConversationMessage[]>(() => initialMessages(initialQuery));
   const [resultVersion, setResultVersion] = useState(0);
   const [resultPhase, setResultPhase] = useState<"entering" | "exiting">("entering");
+  const [savedTripId, setSavedTripId] = useState<string | null>(null);
+  const [savingPlan, setSavingPlan] = useState(false);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const responseRef = useRef(response);
+  const itineraryKey = response.data.type === "itinerary"
+    ? `${response.data.title}|${response.data.stops.map((stop) => `${stop.id}:${stop.name}`).join(",")}`
+    : "";
 
   useEffect(() => () => {
     if (resultTimer.current) clearTimeout(resultTimer.current);
   }, []);
 
-  function sendMessage(rawMessage: string) {
+  useEffect(() => {
+    if (response.data.type !== "itinerary") {
+      setSavedTripId(null);
+      setSavingPlan(false);
+      return;
+    }
+    let cancelled = false;
+    setSavedTripId(null);
+    setSavingPlan(true);
+    void saveTripPlan(itineraryToPlan(response.data)).then((plan) => {
+      if (!cancelled) {
+        setSavedTripId(plan.id);
+        setSavingPlan(false);
+      }
+    }).catch(() => {
+      if (!cancelled) setSavingPlan(false);
+    });
+    return () => { cancelled = true; };
+  }, [itineraryKey, response.data]);
+
+  async function sendMessage(rawMessage: string) {
     const message = rawMessage.trim();
     if (!message) return;
+    const phone = normalizePhone(message);
+    if (phone && savedTripId && responseRef.current.data.type === "itinerary") {
+      setMessages((current) => [...current, { id: `user-${current.length}`, role: "user", content: message }]);
+      try {
+        await sendTripPlan(savedTripId, phone);
+        setMessages((current) => [...current, { id: `ock-${current.length + 1}`, role: "assistant", content: `Sent the plan to ${phone}. Check iMessage for the full itinerary.` }]);
+      } catch (cause) {
+        setMessages((current) => [...current, { id: `ock-${current.length + 1}`, role: "assistant", content: cause instanceof Error ? cause.message : "I could not text that plan." }]);
+      }
+      return;
+    }
     const nextResponse = resolveOckRequest(message, responseRef.current);
     responseRef.current = nextResponse;
     setMessages((current) => [
@@ -69,18 +107,18 @@ export function AssistantWorkspace({ initialQuery = "" }: { initialQuery?: strin
         </header>
 
         <div className="mt-4 grid items-start gap-3 lg:grid-cols-[minmax(250px,0.29fr)_minmax(0,0.71fr)] lg:gap-4">
-          <OckContextPanel messages={messages} onPrompt={sendMessage} />
+          <OckContextPanel messages={messages} onPrompt={(prompt) => void sendMessage(prompt)} />
           <section aria-label="Ock structured result" className="ock-workspace-shell min-h-[530px] overflow-hidden rounded-[16px] border border-[#e0e3df] bg-[#fffefa] shadow-[0_4px_18px_rgba(21,23,25,0.035)] lg:min-h-[620px]">
             <div key={resultVersion} className={`ock-workspace-content ock-workspace-content-${resultPhase}`}>
-              <OckResultWorkspace response={response} onPrompt={sendMessage} />
+              <OckResultWorkspace response={response} onPrompt={(prompt) => void sendMessage(prompt)} tripId={savedTripId} savingPlan={savingPlan} />
             </div>
           </section>
         </div>
 
         <div className="ock-composer-enter sticky bottom-0 z-20 mt-3 border-t border-[#e2e5e2] bg-[#faf9f6] py-2 sm:py-3">
           <div className="mx-auto max-w-[1120px]">
-            <ChatComposer onSend={sendMessage} />
-            <p className="mt-1.5 text-center text-[9px] text-[#81878b]">Ock is shaping a demo result · mock places and plans, no live data</p>
+            <ChatComposer onSend={(prompt) => void sendMessage(prompt)} />
+            <p className="mt-1.5 text-center text-[9px] text-[#81878b]">{response.data.type === "itinerary" ? "This plan is saved. Enter a phone number to have Ock iMessage it." : "Ock is shaping a demo result · mock places and plans, no live data"}</p>
           </div>
         </div>
       </div>

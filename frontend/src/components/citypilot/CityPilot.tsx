@@ -8,6 +8,7 @@ import { TripPlanner } from "@/components/citypilot/TripPlanner";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import type { TripLocation } from "@/lib/location-suggestions";
 import { compareRoutes, getRouteRecommendation } from "@/lib/route-options";
+import { citypilotToPlan, saveTripPlan } from "@/lib/trips";
 import { getRouteWeather, type RouteWeather, type WeatherPlace } from "@/lib/weather";
 import { isRouteOptionAvailable, routeErrorMessage, type RouteMode, type RouteOption, type RouteRecommendation } from "@/lib/route-metrics";
 
@@ -41,6 +42,8 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
   const [sidebarView, setSidebarView] = useState<SidebarView>("planner");
   const [sidebarExiting, setSidebarExiting] = useState(false);
   const [hasTransitioned, setHasTransitioned] = useState(false);
+  const [savedTripId, setSavedTripId] = useState<string | null>(null);
+  const [savingPlan, setSavingPlan] = useState(false);
   const requestRef = useRef(0);
   const weatherRequest = useRef(0);
   const aiController = useRef<AbortController | null>(null);
@@ -82,6 +85,8 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
     setWeatherState(null);
     setError("");
     setBusy(false);
+    setSavedTripId(null);
+    setSavingPlan(false);
   }
 
   async function planTrip() {
@@ -191,6 +196,30 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
     return () => { cancelled = true; };
   }, [weatherKey]);
 
+  const planKey = showingResults && selected
+    ? `${selected.mode}|${origin.label}|${destination.label}|${selected.departure?.getTime() ?? ""}|${selected.arrival?.getTime() ?? ""}`
+    : "";
+
+  useEffect(() => {
+    if (!planKey || !selected) {
+      setSavedTripId(null);
+      setSavingPlan(false);
+      return;
+    }
+    let cancelled = false;
+    setSavedTripId(null);
+    setSavingPlan(true);
+    void saveTripPlan(citypilotToPlan(origin, destination, selected)).then((plan) => {
+      if (!cancelled) {
+        setSavedTripId(plan.id);
+        setSavingPlan(false);
+      }
+    }).catch(() => {
+      if (!cancelled) setSavingPlan(false);
+    });
+    return () => { cancelled = true; };
+  }, [planKey]);
+
   return (
     <div className="nextstop-workspace relative left-1/2 -mt-12 w-screen max-w-none -translate-x-1/2 px-5 pb-12 sm:px-8 xl:px-12 2xl:px-16">
       <div className="mx-auto max-w-[1600px]">
@@ -210,7 +239,8 @@ export function CityPilot({ initialDestination }: { initialDestination: string }
               {showingResults && selected ? (
                 <TripBreakdown key={selected.mode} option={selected} origin={origin} destination={destination} onEdit={editTrip}
                   weatherStatus={weatherState?.mode === selected.mode ? weatherState.status : "loading"}
-                  weather={weatherState?.mode === selected.mode ? weatherState.weather : undefined} />
+                  weather={weatherState?.mode === selected.mode ? weatherState.weather : undefined}
+                  tripId={savedTripId} savingPlan={savingPlan} />
               ) : (
                 <TripPlanner origin={origin} destination={destination} arriveByDate={arriveByDate} arriveByTime={arriveByTime} busy={busy}
                   locationStatus={userLocation.status} locationError={userLocation.error} usingCurrentLocation={origin.label === "Current location" && origin.latitude != null}

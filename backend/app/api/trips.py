@@ -8,14 +8,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.core.trip_text import format_trip_text
 from app.db import get_db
-from app.models import TripRecord
+from app.models import TripMessageRecord, TripRecord
 from app.routing.geocode import TripPlanningError, resolve_place
 from app.routing.planner import add_summary
 from app.routing.router import ensure_depart_at, plan_trip
-from app.schemas import TripCreate
+from app.schemas import TripCreate, TripPlanCreate, TripSend
 from app.schemas.route_recommendation import RecommendationRequest, RouteRecommendation
 from app.services.grok import recommend_route
+from app.services.photon import MessagingError, send_imessage
 
 router = APIRouter()
 
@@ -56,12 +58,83 @@ async def create_trip(body: TripCreate, db: Session = Depends(get_db)) -> dict:
     return stored
 
 
+@router.post("/trips/plans")
+def save_trip_plan(body: TripPlanCreate, db: Session = Depends(get_db)) -> dict:
+    """Store an Ock or NextStop itinerary so Photon can text the same plan later."""
+    trip_id = uuid4().hex
+    stored = {
+        "id": trip_id,
+        "title": body.title,
+        "origin": {"label": body.origin},
+        "destination": {"label": body.destination},
+        "summary": body.summary or body.title,
+        "leave_at": body.leave_at,
+        "arrive_at": body.arrive_at,
+        "duration_seconds": body.duration_seconds,
+        "source": body.source,
+        "stops": [stop.model_dump() for stop in body.stops or []],
+        "steps": [step.model_dump() for step in body.steps or []],
+        "area": body.area,
+        "time_label": body.time_label,
+        "total": body.total,
+        "budget": body.budget,
+        "mode": body.mode,
+        "live": False,
+    }
+    db.add(
+        TripRecord(
+            id=trip_id,
+            payload=json.dumps(stored),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        )
+    )
+    db.commit()
+    return stored
+
+
 @router.get("/trips/{trip_id}")
 def get_trip(trip_id: str, db: Session = Depends(get_db)) -> dict:
     record = db.get(TripRecord, trip_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Trip not found")
     return json.loads(record.payload)
+
+
+@router.post("/trips/{trip_id}/send")
+async def send_trip(trip_id: str, body: TripSend, db: Session = Depends(get_db)) -> dict:
+    record = db.get(TripRecord, trip_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    text = format_trip_text(add_summary(json.loads(record.payload)))
+    message = TripMessageRecord(
+        id=uuid4().hex,
+        trip_id=trip_id,
+        phone=body.phone,
+        status="failed",
+        body=text,
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    try:
+        sent = await send_imessage(body.phone, text)
+    except MessagingError as exc:
+        message.error = exc.message
+        db.add(message)
+        db.commit()
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+    message.status = "sent"
+    message.from_number = sent.get("fromNumber")
+    message.message_id = sent.get("messageId")
+    db.add(message)
+    db.commit()
+    return {
+        "id": message.id,
+        "trip_id": trip_id,
+        "phone": body.phone,
+        "status": message.status,
+        "from_number": message.from_number,
+    }
 
 
 @router.get("/trips")
