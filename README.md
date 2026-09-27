@@ -1,4 +1,4 @@
-#ChatNYC
+## ChatNYC
 
 Solo NYC subway trip planner. The FastAPI service in `backend/` plans one rider's trip from MTA schedule and GTFS-Realtime data, then stores a read-only meeting snapshot that someone else can open with a share code.
 
